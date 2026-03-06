@@ -5,6 +5,7 @@ import { Command, Option } from "commander";
 import chalk from "chalk";
 import ora from "ora";
 import { makeClient, action, printOrJson, requireNotebookId, resolveArtifactId } from "./options.ts";
+import { RateLimitError } from "../exceptions.ts";
 import type { GlobalOptions } from "../types.ts";
 
 function addCommonGenerateOptions(cmd: Command): Command {
@@ -32,15 +33,21 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating audio...").start();
-      const result = await client.generate.generateAudio(notebookId, {
-        description,
-        format: opts.format,
-        length: opts.length,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateAudio(notebookId, {
+          description,
+          format: opts.format,
+          length: opts.length,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Audio generation started."));
@@ -62,15 +69,21 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating video...").start();
-      const result = await client.generate.generateVideo(notebookId, {
-        description,
-        format: opts.format,
-        style: opts.style,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateVideo(notebookId, {
+          description,
+          format: opts.format,
+          style: opts.style,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Video generation started."));
@@ -91,15 +104,21 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating slide deck...").start();
-      const result = await client.generate.generateSlideDeck(notebookId, {
-        description,
-        format: opts.format,
-        length: opts.length,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateSlideDeck(notebookId, {
+          description,
+          format: opts.format,
+          length: opts.length,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Slide deck generation started."));
@@ -121,15 +140,21 @@ export function buildGenerateCommands(program: Command): void {
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const artifactId = await resolveArtifactId(client, notebookId, opts.artifact);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Revising slide...").start();
-      const result = await client.generate.reviseSlide(notebookId, {
-        description,
-        artifactId,
-        slideNumber: parseInt(opts.slide, 10),
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.reviseSlide(notebookId, {
+          description,
+          artifactId,
+          slideNumber: parseInt(opts.slide, 10),
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Slide revision started."));
@@ -150,15 +175,21 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating quiz...").start();
-      const result = await client.generate.generateQuiz(notebookId, {
-        description,
-        difficulty: opts.difficulty,
-        quantity: opts.quantity,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateQuiz(notebookId, {
+          description,
+          difficulty: opts.difficulty,
+          quantity: opts.quantity,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Quiz generation started."));
@@ -179,15 +210,21 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating flashcards...").start();
-      const result = await client.generate.generateFlashcards(notebookId, {
-        description,
-        difficulty: opts.difficulty,
-        quantity: opts.quantity,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateFlashcards(notebookId, {
+          description,
+          difficulty: opts.difficulty,
+          quantity: opts.quantity,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Flashcards generation started."));
@@ -208,15 +245,21 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating infographic...").start();
-      const result = await client.generate.generateInfographic(notebookId, {
-        description,
-        orientation: opts.orientation,
-        detail: opts.detail,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateInfographic(notebookId, {
+          description,
+          orientation: opts.orientation,
+          detail: opts.detail,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Infographic generation started."));
@@ -235,13 +278,19 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating data table...").start();
-      const result = await client.generate.generateDataTable(notebookId, {
-        description,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateDataTable(notebookId, {
+          description,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Data table generation started."));
@@ -284,6 +333,7 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
 
       // Smart detection: a free-text description with the default briefing-doc format
       // means the user wants a custom report. With any other explicit format, the
@@ -304,14 +354,19 @@ export function buildGenerateCommands(program: Command): void {
       }
 
       const spinner = ora("Generating report...").start();
-      const result = await client.generate.generateReport(notebookId, {
-        description: customPrompt,
-        format,
-        append,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateReport(notebookId, {
+          description: customPrompt,
+          format,
+          append,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Report generation started."));
@@ -321,4 +376,48 @@ export function buildGenerateCommands(program: Command): void {
   );
 
   program.addCommand(genCmd);
+}
+
+// --- Retry helper ---
+
+const RETRY_INITIAL_MS = 60_000;
+const RETRY_MAX_MS = 300_000;
+
+async function generateWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number,
+  jsonMode: boolean,
+  spinner: { text: string; fail: (msg?: string) => void },
+): Promise<T> {
+  let delay = RETRY_INITIAL_MS;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err instanceof RateLimitError && attempt < maxRetries) {
+        const waitSec = Math.round(delay / 1000);
+        spinner.text = chalk.yellow(
+          `Rate limited. Retrying in ${waitSec}s (attempt ${attempt + 1}/${maxRetries})...`,
+        );
+        await sleep(delay);
+        delay = Math.min(delay * 2, RETRY_MAX_MS);
+      } else if (err instanceof RateLimitError) {
+        spinner.fail("Rate limited.");
+        if (jsonMode) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.log(JSON.stringify({ error: true, code: "RATE_LIMITED", message: msg }));
+          process.exit(1);
+        }
+        throw err;
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw new Error("Unreachable");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

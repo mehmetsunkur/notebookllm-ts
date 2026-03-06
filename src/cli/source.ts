@@ -378,6 +378,31 @@ export function buildSourceCommands(program: Command): void {
       }),
     );
 
+  // source stale <id>
+  sourceCmd
+    .command("stale <sourceId>")
+    .description("Check if a source is stale (exit 0 = stale, exit 1 = fresh)")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (sourceId, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const fresh = await client.sources.checkFreshness(notebookId, resolvedId);
+
+        if (opts.json || globalOpts.json) {
+          console.log(JSON.stringify({ sourceId: resolvedId, stale: !fresh }));
+        } else {
+          console.log(fresh ? "fresh" : "stale");
+        }
+
+        // exit 0 = stale (truthy condition for shell if-then), exit 1 = fresh
+        process.exit(fresh ? 1 : 0);
+      }),
+    );
+
   program.addCommand(sourceCmd);
 }
 

@@ -4,7 +4,7 @@
 
 export const RPCMethod = {
   // Notebooks
-  LIST_NOTEBOOKS: "muqnm",
+  LIST_NOTEBOOKS: "wXbhsf",
   CREATE_NOTEBOOK: "QTsXBe",
   DELETE_NOTEBOOK: "nkFkC",
   RENAME_NOTEBOOK: "Lnuk5b",

@@ -7,18 +7,120 @@ import { getStoragePath } from "../paths.ts";
 
 const AUTH_JSON_ENV = "NOTEBOOKLLM_TS_AUTH_JSON";
 
+const ALLOWED_COOKIE_DOMAINS = new Set<string>([
+  ".google.com",
+  "notebooklm.google.com",
+  ".googleusercontent.com",
+]);
+
+const GOOGLE_REGIONAL_CCTLDS = new Set<string>([
+  "com.sg",
+  "com.au",
+  "com.br",
+  "com.mx",
+  "com.ar",
+  "com.hk",
+  "com.tw",
+  "com.my",
+  "com.ph",
+  "com.vn",
+  "com.pk",
+  "com.bd",
+  "com.ng",
+  "com.eg",
+  "com.tr",
+  "com.ua",
+  "com.co",
+  "com.pe",
+  "com.sa",
+  "com.ae",
+  "co.uk",
+  "co.jp",
+  "co.in",
+  "co.kr",
+  "co.za",
+  "co.nz",
+  "co.id",
+  "co.th",
+  "co.il",
+  "co.ve",
+  "co.cr",
+  "co.ke",
+  "co.ug",
+  "co.tz",
+  "co.ma",
+  "co.ao",
+  "co.mz",
+  "co.zw",
+  "co.bw",
+  "cn",
+  "de",
+  "fr",
+  "it",
+  "es",
+  "nl",
+  "pl",
+  "ru",
+  "ca",
+  "be",
+  "at",
+  "ch",
+  "se",
+  "no",
+  "dk",
+  "fi",
+  "pt",
+  "gr",
+  "cz",
+  "ro",
+  "hu",
+  "ie",
+  "sk",
+  "bg",
+  "hr",
+  "si",
+  "lt",
+  "lv",
+  "ee",
+  "lu",
+  "cl",
+  "cat",
+]);
+
+function isGoogleDomain(domain: string): boolean {
+  if (domain === ".google.com") return true;
+  if (!domain.startsWith(".google.")) return false;
+  return GOOGLE_REGIONAL_CCTLDS.has(domain.slice(".google.".length));
+}
+
+function isAllowedAuthDomain(domain: string): boolean {
+  return ALLOWED_COOKIE_DOMAINS.has(domain) || isGoogleDomain(domain);
+}
+
 /**
  * Build a Cookie header string from an array of cookie entries.
- * Only includes cookies relevant to notebooklm.google.com.
+ * Deduplicates by cookie name and prefers .google.com values.
  */
 export function buildCookieHeader(cookies: CookieEntry[]): string {
-  const relevant = cookies.filter(
-    (c) =>
-      c.domain.includes("google.com") ||
-      c.domain.includes("notebooklm") ||
-      c.domain === ".google.com",
-  );
-  return relevant.map((c) => `${c.name}=${c.value}`).join("; ");
+  const deduped = new Map<string, string>();
+  const sourceDomain = new Map<string, string>();
+
+  for (const cookie of cookies) {
+    const name = cookie.name;
+    const domain = cookie.domain ?? "";
+    if (!name || !isAllowedAuthDomain(domain)) continue;
+
+    const existingDomain = sourceDomain.get(name);
+    const useCookie = !existingDomain || domain === ".google.com";
+    if (useCookie) {
+      deduped.set(name, cookie.value);
+      sourceDomain.set(name, domain);
+    }
+  }
+
+  return Array.from(deduped.entries())
+    .map(([name, value]) => `${name}=${value}`)
+    .join("; ");
 }
 
 /**
@@ -69,7 +171,11 @@ export async function loadCookieHeader(storagePath?: string): Promise<string> {
     throw new AuthError("No cookies found in storage state. Run `notebooklm login` to authenticate.");
   }
 
-  return buildCookieHeader(state.cookies);
+  const cookieHeader = buildCookieHeader(state.cookies);
+  if (!cookieHeader) {
+    throw new AuthError("No valid Google auth cookies found. Run `notebooklm login` to authenticate.");
+  }
+  return cookieHeader;
 }
 
 /**

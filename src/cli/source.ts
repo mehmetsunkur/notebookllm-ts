@@ -1,0 +1,307 @@
+// Source commands: list, add, get, delete, rename, refresh, fulltext, guide, wait
+
+import { Command } from "commander";
+import chalk from "chalk";
+import Table from "cli-table3";
+import ora from "ora";
+import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
+import type { GlobalOptions } from "../types.ts";
+
+export function buildSourceCommands(program: Command): void {
+  const sourceCmd = new Command("source").description("Manage notebook sources");
+
+  // source list
+  sourceCmd
+    .command("list")
+    .description("List sources in the active notebook")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const sources = await client.sources.list(notebookId);
+
+        printOrJson(sources, opts.json || globalOpts.json, (data) => {
+          if (data.length === 0) {
+            console.log(chalk.dim("No sources."));
+            return;
+          }
+          const table = new Table({
+            head: [chalk.bold("ID"), chalk.bold("Title"), chalk.bold("Type"), chalk.bold("Status")],
+          });
+          for (const s of data) {
+            table.push([s.id, s.title, s.type ?? "-", statusColor(s.status)]);
+          }
+          console.log(table.toString());
+        });
+      }),
+    );
+
+  // source add <url|file|text>
+  sourceCmd
+    .command("add <value>")
+    .description("Add a source (URL, file path, or text content)")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--title <title>", "Source title (for text sources)")
+    .option("--type <type>", "Force type: url|file|text")
+    .option("--no-wait", "Do not wait for processing to complete")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (value, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+
+        const spinner = ora("Adding source...").start();
+        let source;
+        try {
+          const type = opts.type ?? detectSourceType(value);
+          if (type === "file") {
+            source = await client.sources.addFile(notebookId, value, opts.title);
+          } else if (type === "text") {
+            source = await client.sources.addText(notebookId, opts.title ?? "Text", value);
+          } else {
+            source = await client.sources.addUrl(notebookId, value);
+          }
+          spinner.succeed("Source added.");
+        } catch (e) {
+          spinner.fail("Failed to add source.");
+          throw e;
+        }
+
+        if (opts.wait !== false && source.status !== "ready") {
+          const waitSpinner = ora("Waiting for source to process...").start();
+          try {
+            source = await client.sources.wait(notebookId, source.id);
+            waitSpinner.succeed("Source ready.");
+          } catch (e) {
+            waitSpinner.fail("Source processing failed.");
+            throw e;
+          }
+        }
+
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(`ID:     ${s.id}`);
+          console.log(`Title:  ${s.title}`);
+          console.log(`Status: ${statusColor(s.status)}`);
+        });
+      }),
+    );
+
+  // source add-drive <id> <title>
+  sourceCmd
+    .command("add-drive <driveId> <title>")
+    .description("Add a Google Drive document as a source")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (driveId, title, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const source = await client.sources.addDrive(notebookId, driveId, title);
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(chalk.green(`Drive source added: ${s.id}`));
+        });
+      }),
+    );
+
+  // source add-research <query>
+  sourceCmd
+    .command("add-research <query>")
+    .description("Add research sources based on a query")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--mode <mode>", "Research mode", "standard")
+    .option("--from <date>", "Start date for research")
+    .option("--import-all", "Import all research results")
+    .option("--no-wait", "Do not wait")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (query, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const source = await client.sources.addResearch(notebookId, query, {
+          mode: opts.mode,
+          from: opts.from,
+          importAll: opts.importAll,
+        });
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(chalk.green(`Research source added: ${s.id}`));
+        });
+      }),
+    );
+
+  // source get <id>
+  sourceCmd
+    .command("get <sourceId>")
+    .description("Get details of a source")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (sourceId, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const source = await client.sources.get(notebookId, sourceId);
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(`ID:     ${s.id}`);
+          console.log(`Title:  ${s.title}`);
+          console.log(`Type:   ${s.type ?? "-"}`);
+          console.log(`Status: ${statusColor(s.status)}`);
+          if (s.url) console.log(`URL:    ${s.url}`);
+        });
+      }),
+    );
+
+  // source fulltext <id>
+  sourceCmd
+    .command("fulltext <sourceId>")
+    .description("Get the full text content of a source")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (sourceId, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const result = await client.sources.fulltext(notebookId, sourceId);
+        if (opts.json || globalOpts.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(result.content);
+        }
+      }),
+    );
+
+  // source guide <id>
+  sourceCmd
+    .command("guide <sourceId>")
+    .description("Get the reading guide for a source")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (sourceId, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const guide = await client.sources.guide(notebookId, sourceId);
+        if (opts.json || globalOpts.json) {
+          console.log(JSON.stringify({ guide }, null, 2));
+        } else {
+          console.log(guide);
+        }
+      }),
+    );
+
+  // source rename <id> <title>
+  sourceCmd
+    .command("rename <sourceId> <title>")
+    .description("Rename a source")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (sourceId, title, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const source = await client.sources.rename(notebookId, sourceId, title);
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(chalk.green(`Renamed to: ${s.title}`));
+        });
+      }),
+    );
+
+  // source refresh <id>
+  sourceCmd
+    .command("refresh <sourceId>")
+    .description("Refresh a source (re-fetch from URL)")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (sourceId, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const source = await client.sources.refresh(notebookId, sourceId);
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(chalk.green(`Source refreshed: ${s.id}`));
+        });
+      }),
+    );
+
+  // source delete <id>
+  sourceCmd
+    .command("delete <sourceId>")
+    .description("Delete a source")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("-y, --yes", "Skip confirmation")
+    .action(
+      action(async (sourceId, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+
+        if (!opts.yes) {
+          const { createInterface } = await import("readline");
+          const rl = createInterface({ input: process.stdin, output: process.stdout });
+          const answer = await new Promise<string>((resolve) =>
+            rl.question(`Delete source ${sourceId}? (y/N) `, resolve),
+          );
+          rl.close();
+          if (answer.toLowerCase() !== "y") {
+            console.log("Cancelled.");
+            return;
+          }
+        }
+
+        await client.sources.delete(notebookId, sourceId);
+        console.log(chalk.green(`Source deleted: ${sourceId}`));
+      }),
+    );
+
+  // source wait <id>
+  sourceCmd
+    .command("wait <sourceId>")
+    .description("Wait for a source to finish processing")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--timeout <seconds>", "Timeout in seconds", "300")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (sourceId, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const spinner = ora("Waiting for source to process...").start();
+        const source = await client.sources.wait(notebookId, sourceId, {
+          timeoutMs: parseInt(opts.timeout, 10) * 1000,
+        });
+        spinner.succeed("Source ready.");
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(`Status: ${statusColor(s.status)}`);
+        });
+      }),
+    );
+
+  program.addCommand(sourceCmd);
+}
+
+function detectSourceType(value: string): "url" | "file" | "text" {
+  if (value.startsWith("http://") || value.startsWith("https://")) return "url";
+  // Check if it looks like a file path
+  if (value.includes("/") || value.includes("\\") || value.includes(".")) {
+    return "file";
+  }
+  return "text";
+}
+
+function statusColor(status: string | undefined): string {
+  switch (status) {
+    case "ready": return chalk.green(status ?? "-");
+    case "processing": return chalk.yellow(status);
+    case "failed": return chalk.red(status);
+    default: return status ?? "-";
+  }
+}

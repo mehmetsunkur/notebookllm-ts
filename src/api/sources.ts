@@ -1,0 +1,190 @@
+import { ClientCore } from "./core.ts";
+import { RPCMethod } from "../rpc/methods.ts";
+import type { Source, SourceFullText } from "../types.ts";
+import { SourceNotFoundError, SourceAddError, SourceTimeoutError } from "../exceptions.ts";
+
+const UPLOAD_URL = "https://notebooklm.google.com/upload/";
+const CHUNK_SIZE = 64 * 1024; // 64KB chunks
+
+export class SourcesAPI extends ClientCore {
+  async list(notebookId: string): Promise<Source[]> {
+    const raw = await this.rpc(RPCMethod.LIST_SOURCES, [notebookId]);
+    return parseSourceList(raw);
+  }
+
+  async get(notebookId: string, sourceId: string): Promise<Source> {
+    const raw = await this.rpc(RPCMethod.GET_SOURCE, [notebookId, sourceId]);
+    return parseSource(raw);
+  }
+
+  async addUrl(notebookId: string, url: string): Promise<Source> {
+    const raw = await this.rpc(RPCMethod.ADD_SOURCE_URL, [notebookId, url]);
+    return parseSource(raw);
+  }
+
+  async addText(notebookId: string, title: string, content: string): Promise<Source> {
+    const raw = await this.rpc(RPCMethod.ADD_SOURCE_TEXT, [notebookId, title, content]);
+    return parseSource(raw);
+  }
+
+  async addDrive(notebookId: string, driveId: string, title: string): Promise<Source> {
+    const raw = await this.rpc(RPCMethod.ADD_SOURCE_DRIVE, [notebookId, driveId, title]);
+    return parseSource(raw);
+  }
+
+  async addFile(notebookId: string, filePath: string, title?: string): Promise<Source> {
+    const file = Bun.file(filePath);
+    if (!(await file.exists())) {
+      throw new SourceAddError(`File not found: ${filePath}`);
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const mimeType = guessMimeType(filePath);
+    const fileName = title ?? filePath.split("/").pop() ?? "upload";
+
+    // Start upload
+    const uploadToken = await this.uploadFile(
+      UPLOAD_URL,
+      bytes,
+      mimeType,
+      bytes.length,
+    );
+
+    const raw = await this.rpc(RPCMethod.ADD_SOURCE_FILE, [
+      notebookId,
+      uploadToken,
+      fileName,
+      mimeType,
+    ]);
+    return parseSource(raw);
+  }
+
+  async addResearch(
+    notebookId: string,
+    query: string,
+    options: { mode?: string; from?: string; importAll?: boolean } = {},
+  ): Promise<Source> {
+    const raw = await this.rpc(RPCMethod.ADD_SOURCE_RESEARCH, [
+      notebookId,
+      query,
+      options.mode ?? "standard",
+      options.from ?? null,
+      options.importAll ?? false,
+    ]);
+    return parseSource(raw);
+  }
+
+  async delete(notebookId: string, sourceId: string): Promise<void> {
+    await this.rpc(RPCMethod.DELETE_SOURCE, [notebookId, sourceId]);
+  }
+
+  async rename(notebookId: string, sourceId: string, newTitle: string): Promise<Source> {
+    const raw = await this.rpc(RPCMethod.RENAME_SOURCE, [notebookId, sourceId, newTitle]);
+    return parseSource(raw);
+  }
+
+  async refresh(notebookId: string, sourceId: string): Promise<Source> {
+    const raw = await this.rpc(RPCMethod.REFRESH_SOURCE, [notebookId, sourceId]);
+    return parseSource(raw);
+  }
+
+  async fulltext(notebookId: string, sourceId: string): Promise<SourceFullText> {
+    const raw = await this.rpc(RPCMethod.SOURCE_FULLTEXT, [notebookId, sourceId]);
+    return parseSourceFullText(sourceId, raw);
+  }
+
+  async guide(notebookId: string, sourceId: string): Promise<string> {
+    const raw = await this.rpc(RPCMethod.SOURCE_GUIDE, [notebookId, sourceId]);
+    if (Array.isArray(raw) && typeof raw[0] === "string") return raw[0];
+    return String(raw);
+  }
+
+  async wait(
+    notebookId: string,
+    sourceId: string,
+    options: { timeoutMs?: number; intervalMs?: number } = {},
+  ): Promise<Source> {
+    const timeout = options.timeoutMs ?? 5 * 60 * 1000;
+    const interval = options.intervalMs ?? 3000;
+    const deadline = Date.now() + timeout;
+
+    while (Date.now() < deadline) {
+      const source = await this.get(notebookId, sourceId);
+      if (source.status === "ready") return source;
+      if (source.status === "failed") {
+        throw new SourceAddError(`Source processing failed: ${sourceId}`);
+      }
+      await sleep(interval);
+    }
+
+    throw new SourceTimeoutError(
+      `Source ${sourceId} did not finish processing within ${timeout}ms`,
+    );
+  }
+
+  async findById(notebookId: string, partialId: string): Promise<Source> {
+    const sources = await this.list(notebookId);
+    const match = sources.find(
+      (s) => s.id === partialId || s.id.startsWith(partialId),
+    );
+    if (!match) {
+      throw new SourceNotFoundError(`No source found matching ID prefix: ${partialId}`);
+    }
+    return match;
+  }
+}
+
+// --- Parsers ---
+
+function parseSource(raw: unknown): Source {
+  if (!Array.isArray(raw)) {
+    return { id: "", title: String(raw) };
+  }
+  const arr = raw as unknown[];
+  return {
+    id: String(arr[0] ?? ""),
+    title: String(arr[1] ?? ""),
+    type: (arr[2] as Source["type"]) ?? undefined,
+    status: (arr[3] as Source["status"]) ?? undefined,
+    url: typeof arr[4] === "string" ? arr[4] : undefined,
+    createdMs: typeof arr[5] === "number" ? arr[5] : undefined,
+  };
+}
+
+function parseSourceList(raw: unknown): Source[] {
+  if (!Array.isArray(raw)) return [];
+  const outer = raw as unknown[];
+  const list = Array.isArray(outer[0]) ? (outer[0] as unknown[]) : outer;
+  return list.filter(Array.isArray).map(parseSource);
+}
+
+function parseSourceFullText(sourceId: string, raw: unknown): SourceFullText {
+  const content = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
+  return { sourceId, content };
+}
+
+function guessMimeType(filePath: string): string {
+  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    pdf: "application/pdf",
+    txt: "text/plain",
+    md: "text/markdown",
+    html: "text/html",
+    htm: "text/html",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    doc: "application/msword",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    epub: "application/epub+zip",
+    mp3: "audio/mpeg",
+    mp4: "video/mp4",
+    wav: "audio/wav",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+  };
+  return map[ext] ?? "application/octet-stream";
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

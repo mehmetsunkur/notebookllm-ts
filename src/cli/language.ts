@@ -16,7 +16,7 @@ export function buildLanguageCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const languages = await client.settings.listLanguages();
 
@@ -37,7 +37,7 @@ export function buildLanguageCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
 
         let language: string;
@@ -65,7 +65,7 @@ export function buildLanguageCommands(program: Command): void {
     .option("--local", "Set in local config only (does not update notebook on server)")
     .action(
       action(async (code, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
 
         if (opts.local) {

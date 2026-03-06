@@ -17,7 +17,7 @@ export function buildShareCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const settings = await client.sharing.status(notebookId);
@@ -54,7 +54,7 @@ export function buildShareCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const enable = opts.enable === true || opts.disable !== true;
@@ -74,7 +74,7 @@ export function buildShareCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (level, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const settings = await client.sharing.setViewLevel(
@@ -97,7 +97,7 @@ export function buildShareCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (email, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const settings = await client.sharing.addCollaborator(notebookId, email, {
@@ -119,7 +119,7 @@ export function buildShareCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (email, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const settings = await client.sharing.updateCollaborator(
@@ -142,7 +142,7 @@ export function buildShareCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (email, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
 

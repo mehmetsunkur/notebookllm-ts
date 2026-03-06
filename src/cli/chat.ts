@@ -17,7 +17,7 @@ export function buildChatCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (question, opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const ctx = await client.loadContext();
@@ -64,7 +64,7 @@ export function buildChatCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const ctx = await client.loadContext();
@@ -100,7 +100,7 @@ export function buildChatCommands(program: Command): void {
     .option("--mode <mode>", "Chat persona mode")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
 

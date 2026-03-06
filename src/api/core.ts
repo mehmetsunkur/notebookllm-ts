@@ -143,7 +143,7 @@ export class ClientCore {
         "X-Goog-Upload-Command": "upload, finalize",
         "X-Goog-Upload-Offset": "0",
       },
-      body: data instanceof Uint8Array ? data : data,
+      body: data as BodyInit,
     });
 
     if (!uploadResponse.ok) {

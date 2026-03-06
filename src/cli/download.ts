@@ -104,7 +104,7 @@ export function buildDownloadCommands(program: Command): void {
         .description(`Download ${typeName} artifact(s)`),
     ).action(
       action(async (path, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         await downloadArtifactByType(typeName, path, opts, globalOpts);
       }),
     );

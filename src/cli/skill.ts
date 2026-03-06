@@ -17,7 +17,7 @@ export function buildSkillCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         // Skills are a NotebookLM Plus feature — the RPC call delegates to core
@@ -36,7 +36,7 @@ export function buildSkillCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         console.log(chalk.dim("Skill status requires NotebookLM Plus subscription."));
@@ -51,7 +51,7 @@ export function buildSkillCommands(program: Command): void {
     .option("-y, --yes", "Skip confirmation")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         console.log(chalk.dim("Skill uninstall requires NotebookLM Plus subscription."));
@@ -66,7 +66,7 @@ export function buildSkillCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         console.log(chalk.dim("Skill show requires NotebookLM Plus subscription."));

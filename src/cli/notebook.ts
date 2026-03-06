@@ -14,7 +14,7 @@ export function buildNotebookCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebooks = await client.notebooks.list();
 
@@ -47,7 +47,7 @@ export function buildNotebookCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (title, opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebook = await client.notebooks.create(title);
 
@@ -65,7 +65,7 @@ export function buildNotebookCommands(program: Command): void {
     .option("-y, --yes", "Skip confirmation prompt")
     .action(
       action(async (id, opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
 
         if (!opts.yes) {
@@ -94,7 +94,7 @@ export function buildNotebookCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (title, opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const notebook = await client.notebooks.rename(notebookId, title);
@@ -113,7 +113,7 @@ export function buildNotebookCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const summary = await client.notebooks.summary(notebookId);

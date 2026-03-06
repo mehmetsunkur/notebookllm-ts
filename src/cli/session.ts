@@ -18,7 +18,7 @@ export function buildSessionCommands(program: Command): void {
     .option("--headless", "Run browser in headless mode (for CI — requires manual cookie paste)")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const homeDir = resolveHomeDir(globalOpts);
         const timeout = parseInt(opts.timeout, 10) * 1000;
         await login({ homeDir, timeout, headless: opts.headless });
@@ -31,7 +31,7 @@ export function buildSessionCommands(program: Command): void {
     .description("Set the active notebook by ID (supports partial match)")
     .action(
       action(async (id, opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await client.useNotebook(id);
         console.log(chalk.green(`Active notebook set to: ${notebookId}`));
@@ -46,7 +46,7 @@ export function buildSessionCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const homeDir = resolveHomeDir(globalOpts) ?? getHomeDir();
         const client = makeClient(globalOpts);
         const ctx = await client.loadContext();
@@ -89,7 +89,7 @@ export function buildSessionCommands(program: Command): void {
     .description("Clear the active notebook context")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         await client.clearContext();
         console.log(chalk.green("Context cleared."));
@@ -106,7 +106,7 @@ export function buildSessionCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const homeDir = resolveHomeDir(globalOpts) ?? getHomeDir();
         const storagePath = getStoragePath(homeDir);
         const hasStorage = await hasValidStorage(storagePath);

@@ -18,7 +18,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const sources = await client.sources.list(notebookId);
@@ -50,7 +50,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (value, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
 
@@ -98,7 +98,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (driveId, title, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const source = await client.sources.addDrive(notebookId, driveId, title);
@@ -120,7 +120,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (query, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const source = await client.sources.addResearch(notebookId, query, {
@@ -142,7 +142,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (sourceId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const source = await client.sources.get(notebookId, sourceId);
@@ -164,7 +164,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (sourceId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const result = await client.sources.fulltext(notebookId, sourceId);
@@ -184,7 +184,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (sourceId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const guide = await client.sources.guide(notebookId, sourceId);
@@ -204,7 +204,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (sourceId, title, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const source = await client.sources.rename(notebookId, sourceId, title);
@@ -222,7 +222,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (sourceId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const source = await client.sources.refresh(notebookId, sourceId);
@@ -240,7 +240,7 @@ export function buildSourceCommands(program: Command): void {
     .option("-y, --yes", "Skip confirmation")
     .action(
       action(async (sourceId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
 
@@ -271,7 +271,7 @@ export function buildSourceCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (sourceId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const spinner = ora("Waiting for source to process...").start();

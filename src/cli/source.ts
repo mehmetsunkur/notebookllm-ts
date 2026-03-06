@@ -91,17 +91,26 @@ export function buildSourceCommands(program: Command): void {
     );
 
   // source add-drive <id> <title>
+  const DRIVE_MIME_TYPES: Record<string, string> = {
+    "google-doc": "application/vnd.google-apps.document",
+    "google-slides": "application/vnd.google-apps.presentation",
+    "google-sheets": "application/vnd.google-apps.spreadsheet",
+    "pdf": "application/pdf",
+  };
+
   sourceCmd
     .command("add-drive <driveId> <title>")
     .description("Add a Google Drive document as a source")
     .option("-n, --notebook <id>", "Notebook ID")
+    .addOption(new Option("--mime-type <type>", "Document type").choices(["google-doc", "google-slides", "google-sheets", "pdf"]).default("google-doc"))
     .option("--json", "Output as JSON")
     .action(
       action(async (driveId, title, opts, cmd) => {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const source = await client.sources.addDrive(notebookId, driveId, title);
+        const mimeType = DRIVE_MIME_TYPES[opts.mimeType];
+        const source = await client.sources.addDrive(notebookId, driveId, title, mimeType);
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(chalk.green(`Drive source added: ${s.id}`));
         });
@@ -231,6 +240,7 @@ export function buildSourceCommands(program: Command): void {
     .command("fulltext <sourceId>")
     .description("Get the full text content of a source")
     .option("-n, --notebook <id>", "Notebook ID")
+    .option("-o, --output <path>", "Write content to file instead of stdout")
     .option("--json", "Output as JSON")
     .action(
       action(async (sourceId, opts, cmd) => {
@@ -239,6 +249,13 @@ export function buildSourceCommands(program: Command): void {
         const notebookId = await requireNotebookId(client, opts.notebook);
         const resolvedId = await resolveSourceId(client, notebookId, sourceId);
         const result = await client.sources.fulltext(notebookId, resolvedId);
+
+        if (opts.output) {
+          await Bun.write(opts.output, result.content);
+          console.log(chalk.green(`Saved ${result.content.length.toLocaleString()} chars to ${opts.output}`));
+          return;
+        }
+
         if (opts.json || globalOpts.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {

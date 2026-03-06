@@ -60,10 +60,15 @@ export class SourcesAPI extends ClientCore {
     return parseSource(raw);
   }
 
-  async addDrive(notebookId: string, driveId: string, title: string): Promise<Source> {
+  async addDrive(
+    notebookId: string,
+    driveId: string,
+    title: string,
+    mimeType = "application/vnd.google-apps.document",
+  ): Promise<Source> {
     const sourceData = [
       driveId,
-      "application/vnd.google-apps.document",
+      mimeType,
       1,
       title,
     ];

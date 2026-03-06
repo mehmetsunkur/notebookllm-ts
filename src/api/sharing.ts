@@ -4,7 +4,9 @@ import type { ShareSettings, Collaborator, Permission } from "../types.ts";
 
 export class SharingAPI extends ClientCore {
   async status(notebookId: string): Promise<ShareSettings> {
-    const raw = await this.rpc(RPCMethod.SHARE_STATUS, [notebookId]);
+    const raw = await this.rpc(RPCMethod.SHARE_STATUS, [notebookId, [2]], {
+      sourcePath: `/notebook/${notebookId}`,
+    });
     return parseShareSettings(raw);
   }
 
@@ -53,21 +55,29 @@ function parseShareSettings(raw: unknown): ShareSettings {
   if (!Array.isArray(raw)) {
     return { isPublic: false };
   }
-  const arr = raw as unknown[];
-  const isPublic = Boolean(arr[0]);
-  const shareLink = typeof arr[1] === "string" ? arr[1] : undefined;
-  const viewLevel = (arr[2] as ShareSettings["viewLevel"]) ?? undefined;
+  const outer = raw as unknown[];
+  const arr = Array.isArray(outer[0]) ? (outer[0] as unknown[]) : outer;
 
-  const collaborators = Array.isArray(arr[3])
-    ? (arr[3] as unknown[]).filter(Array.isArray).map((c) => {
+  const firstUsers = Array.isArray(arr[0]) ? (arr[0] as unknown[]) : [];
+  const userEntries =
+    firstUsers.length > 0 && typeof firstUsers[0] === "string"
+      ? [firstUsers]
+      : firstUsers;
+  const collaborators = userEntries
+    .filter(Array.isArray)
+    .map((c) => {
         const carr = c as unknown[];
         return {
           email: String(carr[0] ?? ""),
-          permission: (carr[1] as Permission) ?? "viewer",
-          addedMs: typeof carr[2] === "number" ? carr[2] : undefined,
+          permission: ((typeof carr[1] === "number"
+            ? (carr[1] === 1 ? "editor" : "viewer")
+            : carr[1]) as Permission) ?? "viewer",
         };
-      })
-    : undefined;
+      });
+
+  const isPublic = Array.isArray(arr[1]) ? Boolean(arr[1][0]) : Boolean(arr[1] ?? false);
+  const shareLink = undefined;
+  const viewLevel: ShareSettings["viewLevel"] = "view";
 
   return { isPublic, shareLink, viewLevel, collaborators };
 }

@@ -4,7 +4,10 @@ import type { Note } from "../types.ts";
 
 export class NotesAPI extends ClientCore {
   async list(notebookId: string): Promise<Note[]> {
-    const raw = await this.rpc(RPCMethod.LIST_NOTES, [notebookId]);
+    const raw = await this.rpc(RPCMethod.LIST_NOTES, [notebookId], {
+      sourcePath: `/notebook/${notebookId}`,
+      allowNull: true,
+    });
     return parseNoteList(raw);
   }
 
@@ -52,6 +55,25 @@ function parseNote(raw: unknown): Note {
 function parseNoteList(raw: unknown): Note[] {
   if (!Array.isArray(raw)) return [];
   const outer = raw as unknown[];
-  const list = Array.isArray(outer[0]) ? (outer[0] as unknown[]) : outer;
-  return list.filter(Array.isArray).map(parseNote);
+  const list = Array.isArray(outer[0]) ? (outer[0] as unknown[]) : [];
+
+  return list
+    .filter(Array.isArray)
+    .map((item) => {
+      const arr = item as unknown[];
+      const id = String(arr[0] ?? "");
+      let title = "";
+      let content = "";
+
+      if (typeof arr[1] === "string") {
+        content = arr[1];
+      } else if (Array.isArray(arr[1])) {
+        const inner = arr[1] as unknown[];
+        content = typeof inner[1] === "string" ? inner[1] : "";
+        title = typeof inner[4] === "string" ? inner[4] : "";
+      }
+
+      return { id, title, content } as Note;
+    })
+    .filter((n) => n.id.length > 0);
 }

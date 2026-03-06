@@ -38,7 +38,23 @@ export class NotebooksAPI extends ClientCore {
   }
 
   async summary(notebookId: string): Promise<string> {
-    const raw = await this.rpc(RPCMethod.NOTEBOOK_SUMMARY, [notebookId]);
+    const raw = await this.rpc(
+      RPCMethod.NOTEBOOK_SUMMARY,
+      [notebookId, [2]],
+      { sourcePath: `/notebook/${notebookId}` },
+    );
+    // Summary response is typically nested as result[0][0][0]
+    if (
+      Array.isArray(raw) &&
+      Array.isArray(raw[0]) &&
+      Array.isArray(raw[0][0]) &&
+      typeof raw[0][0][0] === "string"
+    ) {
+      return raw[0][0][0];
+    }
+    if (Array.isArray(raw) && Array.isArray(raw[0]) && typeof raw[0][0] === "string") {
+      return raw[0][0];
+    }
     if (Array.isArray(raw) && typeof raw[0] === "string") return raw[0];
     return String(raw);
   }

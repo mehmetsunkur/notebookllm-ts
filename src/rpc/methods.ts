@@ -9,7 +9,7 @@ export const RPCMethod = {
   DELETE_NOTEBOOK: "WWINqb",
   RENAME_NOTEBOOK: "s0tc2d",
   GET_NOTEBOOK: "rLM1Ne",
-  NOTEBOOK_SUMMARY: "nNPbhd",
+  NOTEBOOK_SUMMARY: "VfAZjd",
 
   // Sources
   LIST_SOURCES: "sPH3Cd",
@@ -18,12 +18,12 @@ export const RPCMethod = {
   ADD_SOURCE_TEXT: "VvC6Jb",
   ADD_SOURCE_DRIVE: "JBmbbe",
   ADD_SOURCE_RESEARCH: "WbBmHd",
-  GET_SOURCE: "fXTi5d",
-  DELETE_SOURCE: "K5TMF",
-  REFRESH_SOURCE: "avd3Id",
+  GET_SOURCE: "hizoJc",
+  DELETE_SOURCE: "tGMBJ",
+  REFRESH_SOURCE: "FLmJqe",
   SOURCE_FULLTEXT: "gGdLid",
-  SOURCE_GUIDE: "IHmced",
-  RENAME_SOURCE: "CBSmge",
+  SOURCE_GUIDE: "tr032e",
+  RENAME_SOURCE: "b7Wfje",
   WAIT_SOURCE: "sPH3Cd",
 
   // Chat
@@ -32,7 +32,7 @@ export const RPCMethod = {
   CONFIGURE_CHAT: "mBzgzd",
 
   // Artifacts
-  LIST_ARTIFACTS: "FNTBAf",
+  LIST_ARTIFACTS: "gArtLc",
   GET_ARTIFACT: "cFnqAc",
   RENAME_ARTIFACT: "SJKuTd",
   DELETE_ARTIFACT: "m6hPTc",
@@ -56,7 +56,7 @@ export const RPCMethod = {
   DOWNLOAD_ARTIFACT: "OvbQtd",
 
   // Notes
-  LIST_NOTES: "UQsrfe",
+  LIST_NOTES: "cFji9",
   CREATE_NOTE: "XBdRde",
   GET_NOTE: "xmNgXe",
   RENAME_NOTE: "TbnnKb",
@@ -68,7 +68,7 @@ export const RPCMethod = {
   RESEARCH_WAIT: "WbBmHd",
 
   // Share
-  SHARE_STATUS: "FbNTge",
+  SHARE_STATUS: "JFMDGd",
   SHARE_PUBLIC: "EbNTge",
   SHARE_VIEW_LEVEL: "DbNTge",
   SHARE_ADD: "CbNTge",
@@ -77,8 +77,8 @@ export const RPCMethod = {
 
   // Language / Settings
   LIST_LANGUAGES: "VcBmXe",
-  GET_LANGUAGE: "UcBmXe",
-  SET_LANGUAGE: "TcBmXe",
+  GET_LANGUAGE: "ZwVcOc",
+  SET_LANGUAGE: "hT54vc",
 
   // Skills (NotebookLM Plus features)
   SKILL_LIST: "SkillList",

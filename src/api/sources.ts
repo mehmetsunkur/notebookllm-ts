@@ -8,13 +8,19 @@ const CHUNK_SIZE = 64 * 1024; // 64KB chunks
 
 export class SourcesAPI extends ClientCore {
   async list(notebookId: string): Promise<Source[]> {
-    const raw = await this.rpc(RPCMethod.LIST_SOURCES, [notebookId]);
-    return parseSourceList(raw);
+    const raw = await this.rpc(
+      RPCMethod.GET_NOTEBOOK,
+      [notebookId, null, [2], null, 0],
+      { sourcePath: `/notebook/${notebookId}` },
+    );
+    return parseSourceListFromNotebook(raw);
   }
 
   async get(notebookId: string, sourceId: string): Promise<Source> {
-    const raw = await this.rpc(RPCMethod.GET_SOURCE, [notebookId, sourceId]);
-    return parseSource(raw);
+    const sources = await this.list(notebookId);
+    const source = sources.find((s) => s.id === sourceId);
+    if (source) return source;
+    return { id: sourceId, title: "", status: "unknown" };
   }
 
   async addUrl(notebookId: string, url: string): Promise<Source> {
@@ -75,26 +81,54 @@ export class SourcesAPI extends ClientCore {
   }
 
   async delete(notebookId: string, sourceId: string): Promise<void> {
-    await this.rpc(RPCMethod.DELETE_SOURCE, [notebookId, sourceId]);
+    await this.rpc(RPCMethod.DELETE_SOURCE, [[[sourceId]]], {
+      sourcePath: `/notebook/${notebookId}`,
+      allowNull: true,
+    });
   }
 
   async rename(notebookId: string, sourceId: string, newTitle: string): Promise<Source> {
-    const raw = await this.rpc(RPCMethod.RENAME_SOURCE, [notebookId, sourceId, newTitle]);
-    return parseSource(raw);
+    await this.rpc(
+      RPCMethod.RENAME_SOURCE,
+      [null, [sourceId], [[[newTitle]]]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+    return this.get(notebookId, sourceId);
   }
 
   async refresh(notebookId: string, sourceId: string): Promise<Source> {
-    const raw = await this.rpc(RPCMethod.REFRESH_SOURCE, [notebookId, sourceId]);
-    return parseSource(raw);
+    await this.rpc(
+      RPCMethod.REFRESH_SOURCE,
+      [null, [sourceId], [2]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+    return this.get(notebookId, sourceId);
   }
 
   async fulltext(notebookId: string, sourceId: string): Promise<SourceFullText> {
-    const raw = await this.rpc(RPCMethod.SOURCE_FULLTEXT, [notebookId, sourceId]);
+    const raw = await this.rpc(
+      RPCMethod.GET_SOURCE,
+      [[sourceId], [2], [2]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
     return parseSourceFullText(sourceId, raw);
   }
 
   async guide(notebookId: string, sourceId: string): Promise<string> {
-    const raw = await this.rpc(RPCMethod.SOURCE_GUIDE, [notebookId, sourceId]);
+    const raw = await this.rpc(
+      RPCMethod.SOURCE_GUIDE,
+      [[[[sourceId]]]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+    if (
+      Array.isArray(raw) &&
+      Array.isArray(raw[0]) &&
+      Array.isArray(raw[0][0]) &&
+      Array.isArray(raw[0][0][1]) &&
+      typeof raw[0][0][1][0] === "string"
+    ) {
+      return raw[0][0][1][0];
+    }
     if (Array.isArray(raw) && typeof raw[0] === "string") return raw[0];
     return String(raw);
   }
@@ -158,9 +192,72 @@ function parseSourceList(raw: unknown): Source[] {
   return list.filter(Array.isArray).map(parseSource);
 }
 
+function parseSourceListFromNotebook(raw: unknown): Source[] {
+  if (!Array.isArray(raw) || !Array.isArray(raw[0])) return [];
+  const notebookInfo = raw[0] as unknown[];
+  const sources = Array.isArray(notebookInfo[1]) ? (notebookInfo[1] as unknown[]) : [];
+
+  return sources
+    .filter(Array.isArray)
+    .map((src) => {
+      const arr = src as unknown[];
+      const id =
+        Array.isArray(arr[0]) && typeof arr[0][0] === "string" ? arr[0][0] : String(arr[0] ?? "");
+      const title = typeof arr[1] === "string" ? arr[1] : "";
+      const typeCode = Array.isArray(arr[2]) && typeof arr[2][4] === "number" ? arr[2][4] : undefined;
+      const statusCode = Array.isArray(arr[3]) && typeof arr[3][1] === "number" ? arr[3][1] : undefined;
+      const url =
+        Array.isArray(arr[2]) && Array.isArray(arr[2][7]) && typeof arr[2][7][0] === "string"
+          ? arr[2][7][0]
+          : undefined;
+
+      return {
+        id,
+        title,
+        type: mapSourceType(typeCode),
+        status: mapSourceStatus(statusCode),
+        url,
+      } as Source;
+    });
+}
+
 function parseSourceFullText(sourceId: string, raw: unknown): SourceFullText {
-  const content = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
+  let content = "";
+  if (
+    Array.isArray(raw) &&
+    Array.isArray(raw[3]) &&
+    Array.isArray(raw[3][0])
+  ) {
+    const texts = collectText(raw[3][0]);
+    content = texts.join("\n");
+  } else {
+    content = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
+  }
   return { sourceId, content };
+}
+
+function collectText(node: unknown): string[] {
+  if (!Array.isArray(node)) return [];
+  const out: string[] = [];
+  for (const item of node) {
+    if (typeof item === "string") out.push(item);
+    else out.push(...collectText(item));
+  }
+  return out.filter((s) => s.trim().length > 0);
+}
+
+function mapSourceStatus(statusCode: number | undefined): Source["status"] {
+  if (statusCode === 1 || statusCode === 0) return "processing";
+  if (statusCode === 2) return "ready";
+  if (statusCode === 3 || statusCode === 4) return "failed";
+  return "unknown";
+}
+
+function mapSourceType(typeCode: number | undefined): Source["type"] {
+  if (typeCode === 4) return "text";
+  if (typeCode === 5 || typeCode === 9) return "url";
+  if (typeCode === 1 || typeCode === 2 || typeCode === 3 || typeCode === 8 || typeCode === 11 || typeCode === 13 || typeCode === 14 || typeCode === 16) return "file";
+  return "file";
 }
 
 function guessMimeType(filePath: string): string {

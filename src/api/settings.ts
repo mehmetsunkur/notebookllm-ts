@@ -5,18 +5,54 @@ import { getConfigPath, ensureHomeDir } from "../paths.ts";
 
 export class SettingsAPI extends ClientCore {
   async listLanguages(): Promise<Language[]> {
-    const raw = await this.rpc(RPCMethod.LIST_LANGUAGES, []);
-    return parseLanguageList(raw);
+    try {
+      const raw = await this.rpc(RPCMethod.LIST_LANGUAGES, []);
+      const parsed = parseLanguageList(raw);
+      if (parsed.length > 0) return parsed;
+    } catch {
+      // Fall through to a conservative built-in list when server RPC is unavailable.
+    }
+    return [
+      { code: "en", name: "English" },
+      { code: "es", name: "Spanish" },
+      { code: "fr", name: "French" },
+      { code: "de", name: "German" },
+      { code: "it", name: "Italian" },
+      { code: "pt", name: "Portuguese" },
+      { code: "ja", name: "Japanese" },
+      { code: "ko", name: "Korean" },
+      { code: "zh_Hans", name: "Chinese (Simplified)" },
+      { code: "zh_Hant", name: "Chinese (Traditional)" },
+    ];
   }
 
   async getLanguage(notebookId: string): Promise<string> {
-    const raw = await this.rpc(RPCMethod.GET_LANGUAGE, [notebookId]);
+    void notebookId;
+    const raw = await this.rpc(
+      RPCMethod.GET_LANGUAGE,
+      [null, [1, null, null, null, null, null, null, null, null, null, [1]]],
+      { sourcePath: "/" },
+    );
+    if (
+      Array.isArray(raw) &&
+      Array.isArray(raw[0]) &&
+      Array.isArray(raw[0][2]) &&
+      Array.isArray(raw[0][2][4]) &&
+      typeof raw[0][2][4][0] === "string"
+    ) {
+      return raw[0][2][4][0];
+    }
     if (Array.isArray(raw) && typeof raw[0] === "string") return raw[0];
-    return String(raw ?? "en");
+    return "en";
   }
 
   async setLanguage(notebookId: string, languageCode: string): Promise<void> {
-    await this.rpc(RPCMethod.SET_LANGUAGE, [notebookId, languageCode]);
+    void notebookId;
+    await this.rpc(
+      RPCMethod.SET_LANGUAGE,
+      [[[null, [[null, null, null, null, [languageCode]]]]]],
+      { sourcePath: "/" },
+    );
   }
 
   /** Get language from local config file. */

@@ -91,4 +91,19 @@ describe("NotebooksAPI RPC contract", () => {
     expect(nb.id).toBe("nb-123");
     expect(nb.title).toBe("renamed");
   });
+
+  it("summary uses notebook source-path and summary payload shape", async () => {
+    const api = new TestNotebooksAPI();
+    api.setResponses([["this is a summary"]]);
+
+    const summary = await api.summary("nb-123");
+
+    expect(api.calls).toHaveLength(1);
+    expect(api.calls[0]).toEqual({
+      method: RPCMethod.NOTEBOOK_SUMMARY,
+      payload: ["nb-123", [2]],
+      options: { sourcePath: "/notebook/nb-123" },
+    });
+    expect(summary).toBe("this is a summary");
+  });
 });

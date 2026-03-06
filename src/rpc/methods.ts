@@ -13,10 +13,13 @@ export const RPCMethod = {
 
   // Sources
   LIST_SOURCES: "sPH3Cd",
-  ADD_SOURCE_URL: "tEz3pc",
-  ADD_SOURCE_FILE: "Cy3CSb",
-  ADD_SOURCE_TEXT: "VvC6Jb",
-  ADD_SOURCE_DRIVE: "JBmbbe",
+  ADD_SOURCE: "izAoDd",
+  ADD_SOURCE_FILE: "o4cbdc",
+  CHECK_SOURCE_FRESHNESS: "yR9Yof",
+  // Backward-compatible aliases (all use unified ADD_SOURCE contract)
+  ADD_SOURCE_URL: "izAoDd",
+  ADD_SOURCE_TEXT: "izAoDd",
+  ADD_SOURCE_DRIVE: "izAoDd",
   ADD_SOURCE_RESEARCH: "WbBmHd",
   GET_SOURCE: "hizoJc",
   DELETE_SOURCE: "tGMBJ",
@@ -28,52 +31,66 @@ export const RPCMethod = {
 
   // Chat
   ASK: "aQ1Oc",
-  CHAT_HISTORY: "Kj3VFf",
-  CONFIGURE_CHAT: "mBzgzd",
+  GET_LAST_CONVERSATION_ID: "hPTbtc",
+  GET_CONVERSATION_TURNS: "khqZz",
+  // Backward-compatible aliases
+  CHAT_HISTORY: "khqZz",
+  CONFIGURE_CHAT: "s0tc2d",
 
   // Artifacts
   LIST_ARTIFACTS: "gArtLc",
   GET_ARTIFACT: "cFnqAc",
-  RENAME_ARTIFACT: "SJKuTd",
-  DELETE_ARTIFACT: "m6hPTc",
-  EXPORT_ARTIFACT: "vELqYb",
+  CREATE_ARTIFACT: "R7cb6c",
+  RENAME_ARTIFACT: "rc3d8d",
+  DELETE_ARTIFACT: "V5N4be",
+  EXPORT_ARTIFACT: "Krh3pd",
+  GET_SUGGESTED_REPORTS: "ciyUvf",
+  GET_INTERACTIVE_HTML: "v9rmvd",
   POLL_ARTIFACT_TASK: "EIfNad",
-  ARTIFACT_SUGGESTIONS: "vBXTnd",
+  ARTIFACT_SUGGESTIONS: "ciyUvf",
 
   // Generate
-  GENERATE_AUDIO: "SL9rnb",
-  GENERATE_VIDEO: "gHRuGb",
-  GENERATE_SLIDE_DECK: "XdPCHb",
-  REVISE_SLIDE: "HFiFbd",
-  GENERATE_QUIZ: "lMTpTb",
-  GENERATE_FLASHCARDS: "eD4a3b",
-  GENERATE_INFOGRAPHIC: "cSbRJb",
-  GENERATE_DATA_TABLE: "YkwRgb",
-  GENERATE_MIND_MAP: "mHUBcc",
-  GENERATE_REPORT: "j7ZQNd",
+  GENERATE_AUDIO: "R7cb6c",
+  GENERATE_VIDEO: "R7cb6c",
+  GENERATE_SLIDE_DECK: "R7cb6c",
+  REVISE_SLIDE: "KmcKPe",
+  GENERATE_QUIZ: "R7cb6c",
+  GENERATE_FLASHCARDS: "R7cb6c",
+  GENERATE_INFOGRAPHIC: "R7cb6c",
+  GENERATE_DATA_TABLE: "R7cb6c",
+  GENERATE_MIND_MAP: "yyryJe",
+  GENERATE_REPORT: "R7cb6c",
 
   // Download
   DOWNLOAD_ARTIFACT: "OvbQtd",
 
   // Notes
   LIST_NOTES: "cFji9",
-  CREATE_NOTE: "XBdRde",
+  CREATE_NOTE: "CYK0Xb",
+  UPDATE_NOTE: "cYAfTb",
   GET_NOTE: "xmNgXe",
   RENAME_NOTE: "TbnnKb",
-  DELETE_NOTE: "x4Rtmb",
+  DELETE_NOTE: "AH0mwd",
   SAVE_NOTE: "Q8zvOc",
 
   // Research
-  RESEARCH_STATUS: "GbBmHd",
-  RESEARCH_WAIT: "WbBmHd",
+  START_FAST_RESEARCH: "Ljjv0c",
+  START_DEEP_RESEARCH: "QA9ei",
+  POLL_RESEARCH: "e3bVqc",
+  IMPORT_RESEARCH: "LBwxtb",
+  // Backward-compatible aliases
+  RESEARCH_STATUS: "e3bVqc",
+  RESEARCH_WAIT: "e3bVqc",
 
   // Share
   SHARE_STATUS: "JFMDGd",
-  SHARE_PUBLIC: "EbNTge",
-  SHARE_VIEW_LEVEL: "DbNTge",
-  SHARE_ADD: "CbNTge",
-  SHARE_UPDATE: "BbNTge",
-  SHARE_REMOVE: "AbNTge",
+  SHARE_NOTEBOOK: "QDyure",
+  // Backward-compatible aliases
+  SHARE_PUBLIC: "QDyure",
+  SHARE_VIEW_LEVEL: "s0tc2d",
+  SHARE_ADD: "QDyure",
+  SHARE_UPDATE: "QDyure",
+  SHARE_REMOVE: "QDyure",
 
   // Language / Settings
   LIST_LANGUAGES: "VcBmXe",

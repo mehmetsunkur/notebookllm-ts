@@ -108,6 +108,75 @@ export function buildSourceCommands(program: Command): void {
       }),
     );
 
+  // source add-url <url>
+  sourceCmd
+    .command("add-url <url>")
+    .description("Add a URL source")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--no-wait", "Do not wait for processing")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (url, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        let source = await client.sources.addUrl(notebookId, url);
+        if (opts.wait !== false && source.id) {
+          source = await client.sources.wait(notebookId, source.id);
+        }
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(chalk.green(`URL source added: ${s.id}`));
+        });
+      }),
+    );
+
+  // source add-text
+  sourceCmd
+    .command("add-text")
+    .description("Add a text source")
+    .requiredOption("--title <title>", "Source title")
+    .requiredOption("--content <content>", "Source content")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--no-wait", "Do not wait for processing")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        let source = await client.sources.addText(notebookId, opts.title, opts.content);
+        if (opts.wait !== false && source.id) {
+          source = await client.sources.wait(notebookId, source.id);
+        }
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(chalk.green(`Text source added: ${s.id}`));
+        });
+      }),
+    );
+
+  // source add-file <path>
+  sourceCmd
+    .command("add-file <filePath>")
+    .description("Add a file source")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--title <title>", "Override source title")
+    .option("--no-wait", "Do not wait for processing")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (filePath, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        let source = await client.sources.addFile(notebookId, filePath, opts.title);
+        if (opts.wait !== false && source.id) {
+          source = await client.sources.wait(notebookId, source.id);
+        }
+        printOrJson(source, opts.json || globalOpts.json, (s) => {
+          console.log(chalk.green(`File source added: ${s.id}`));
+        });
+      }),
+    );
+
   // source add-research <query>
   sourceCmd
     .command("add-research <query>")

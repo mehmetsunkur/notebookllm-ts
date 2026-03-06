@@ -10,7 +10,11 @@ import {
 
 export class ArtifactsAPI extends ClientCore {
   async list(notebookId: string, type?: ArtifactType): Promise<Artifact[]> {
-    const raw = await this.rpc(RPCMethod.LIST_ARTIFACTS, [notebookId, type ?? null]);
+    const raw = await this.rpc(
+      RPCMethod.LIST_ARTIFACTS,
+      [[2], notebookId, 'NOT artifact.status = "ARTIFACT_STATUS_SUGGESTED"'],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
     const artifacts = parseArtifactList(raw);
     if (type) return artifacts.filter((a) => a.type === type);
     return artifacts;

@@ -1,6 +1,6 @@
 import { ClientCore } from "./core.ts";
 import { RPCMethod } from "../rpc/methods.ts";
-import type { Notebook } from "../types.ts";
+import type { Notebook, NotebookDescription, SuggestedTopic } from "../types.ts";
 import { NotebookNotFoundError } from "../exceptions.ts";
 
 export class NotebooksAPI extends ClientCore {
@@ -57,6 +57,44 @@ export class NotebooksAPI extends ClientCore {
     }
     if (Array.isArray(raw) && typeof raw[0] === "string") return raw[0];
     return String(raw);
+  }
+
+  /** Get AI-generated summary and suggested topics for a notebook. */
+  async getDescription(notebookId: string): Promise<NotebookDescription> {
+    const raw = await this.rpc(
+      RPCMethod.NOTEBOOK_SUMMARY,
+      [notebookId, [2]],
+      { sourcePath: `/notebook/${notebookId}` },
+    );
+
+    let summary = "";
+    const suggestedTopics: SuggestedTopic[] = [];
+
+    // Response structure: [[[summary_string], [[topics]], ...]]
+    // Summary is at result[0][0][0], topics at result[0][1][0]
+    if (Array.isArray(raw)) {
+      try {
+        const outer = raw[0] as unknown[];
+        const summaryVal = (outer[0] as unknown[])?.[0];
+        summary = typeof summaryVal === "string" ? summaryVal : "";
+
+        const topicsList = ((outer[1] as unknown[])?.[0]) as unknown[] | undefined;
+        if (Array.isArray(topicsList)) {
+          for (const topic of topicsList) {
+            if (Array.isArray(topic) && topic.length >= 2) {
+              suggestedTopics.push({
+                question: typeof topic[0] === "string" ? topic[0] : "",
+                prompt: typeof topic[1] === "string" ? topic[1] : "",
+              });
+            }
+          }
+        }
+      } catch {
+        // partial result is acceptable (e.g. summary but no topics yet)
+      }
+    }
+
+    return { summary, suggestedTopics };
   }
 
   /** Find a notebook by partial ID match. */

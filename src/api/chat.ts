@@ -1,6 +1,11 @@
 import { ClientCore } from "./core.ts";
 import { RPCMethod } from "../rpc/methods.ts";
 import type { ChatMessage, ChatResponse } from "../types.ts";
+import { NetworkError } from "../exceptions.ts";
+import { rpcErrorFromStatus } from "../rpc/errors.ts";
+
+const CHAT_QUERY_URL =
+  "https://notebooklm.google.com/_/LabsTailwindUi/data/google.internal.labs.tailwind.orchestration.v1.LabsTailwindOrchestrationService/GenerateFreeFormStreamed";
 
 export class ChatAPI extends ClientCore {
   async ask(
@@ -12,14 +17,71 @@ export class ChatAPI extends ClientCore {
       saveAsNote?: boolean;
     } = {},
   ): Promise<ChatResponse> {
-    const raw = await this.rpc(RPCMethod.ASK, [
-      notebookId,
+    await this.ensureAuth();
+
+    const sourceIds = options.sourceIds ?? [];
+    const sourcesArray = sourceIds.map((sid) => [[sid]]);
+    const conversationId = options.conversationId ?? crypto.randomUUID();
+
+    const params = [
+      sourcesArray,
       question,
-      options.conversationId ?? null,
-      options.sourceIds ?? null,
-      options.saveAsNote ?? false,
-    ]);
-    return parseChatResponse(raw);
+      null,
+      [2, null, [1], [1]],
+      conversationId,
+      null,
+      null,
+      notebookId,
+      1,
+    ];
+
+    const fReq = [null, JSON.stringify(params)];
+    const body = `f.req=${encodeURIComponent(JSON.stringify(fReq))}&at=${encodeURIComponent(this.getTokens().snlm0e)}&`;
+
+    const urlParams = new URLSearchParams({
+      bl: this.getTokens().cfb2h,
+      hl: this.language ?? "en",
+      _reqid: String(Date.now()),
+      rt: "c",
+      "f.sid": this.getTokens().fdrfje,
+    });
+    const url = `${CHAT_QUERY_URL}?${urlParams.toString()}`;
+
+    if (this.verbose) {
+      console.error(`[CHAT] ask -> ${url}`);
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          Cookie: this.getCookieHeader(),
+          "User-Agent":
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Referer: "https://notebooklm.google.com/",
+          "X-Same-Domain": "1",
+        },
+        body,
+      });
+    } catch (e) {
+      throw new NetworkError(
+        `Network error calling ask: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+
+    if (!response.ok) {
+      throw rpcErrorFromStatus(response.status, "ask");
+    }
+
+    const text = await response.text();
+    const parsed = parseAskStreamResponse(text);
+
+    return {
+      answer: parsed.answer,
+      conversationId: parsed.conversationId ?? conversationId,
+    };
   }
 
   async history(
@@ -40,6 +102,75 @@ export class ChatAPI extends ClientCore {
 }
 
 // --- Parsers ---
+
+function parseAskStreamResponse(
+  responseText: string,
+): { answer: string; conversationId?: string } {
+  const lines = responseText
+    .replace(/^\)\]\}'\n?/, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let bestMarkedAnswer = "";
+  let bestUnmarkedAnswer = "";
+  let conversationId: string | undefined;
+
+  const processChunk = (jsonStr: string): void => {
+    let data: unknown;
+    try {
+      data = JSON.parse(jsonStr);
+    } catch {
+      return;
+    }
+    if (!Array.isArray(data)) return;
+
+    for (const item of data) {
+      if (!Array.isArray(item) || item[0] !== "wrb.fr") continue;
+      const innerJson = item[2];
+      if (typeof innerJson !== "string") continue;
+
+      let innerData: unknown;
+      try {
+        innerData = JSON.parse(innerJson);
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(innerData) || !Array.isArray(innerData[0])) continue;
+
+      const first = innerData[0] as unknown[];
+      const text = typeof first[0] === "string" ? first[0] : "";
+      if (!text) continue;
+
+      const isMarkedAnswer =
+        Array.isArray(first[4]) && first[4].length > 0 && first[4][first[4].length - 1] === 1;
+
+      if (isMarkedAnswer) {
+        if (text.length > bestMarkedAnswer.length) bestMarkedAnswer = text;
+      } else if (text.length > bestUnmarkedAnswer.length) {
+        bestUnmarkedAnswer = text;
+      }
+
+      if (Array.isArray(first[2]) && typeof first[2][0] === "string") {
+        conversationId = first[2][0] as string;
+      }
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const size = parseInt(line, 10);
+    if (!Number.isNaN(size)) {
+      if (i + 1 < lines.length) processChunk(lines[i + 1]);
+      i += 1;
+    } else {
+      processChunk(line);
+    }
+  }
+
+  const answer = bestMarkedAnswer || bestUnmarkedAnswer || "";
+  return { answer, conversationId };
+}
 
 function parseChatResponse(raw: unknown): ChatResponse {
   if (!Array.isArray(raw)) {

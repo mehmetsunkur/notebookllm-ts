@@ -43,6 +43,8 @@ jobs:
         run: >
           bun build --compile
           --target=${{ matrix.target }}
+          --external playwright
+          --external playwright-core
           --external chromium-bidi
           --external electron
           src/cli/index.ts
@@ -86,18 +88,12 @@ jobs:
             ### Windows
             Rename to `notebooklm.exe` and add its location to your PATH.
 
-            ### After download — install the Chromium browser (required for `login`)
-            ```bash
-            # Install Playwright's Chromium (one-time setup)
-            npx playwright install chromium
-            # or, if you have bun:
-            bunx playwright install chromium
-            ```
-
-            This is only needed for the `notebooklm login` command.
-            All other commands work without it once you have a saved session.
-
             ### Authenticate
             ```bash
             notebooklm login
             ```
+
+            On first run, `login` will automatically install Playwright and Chromium
+            to `~/.notebookllm-ts/` (~50 MB, one-time). **npm must be available** on your PATH.
+
+            All other commands work without Playwright once you have a saved session.

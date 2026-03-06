@@ -29,7 +29,7 @@ export function buildGenerateCommands(program: Command): void {
       .option("--length <length>", "Length hint (short|medium|long)"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating audio...").start();
@@ -59,7 +59,7 @@ export function buildGenerateCommands(program: Command): void {
       .option("--style <style>", "Video style"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating video...").start();
@@ -88,7 +88,7 @@ export function buildGenerateCommands(program: Command): void {
       .option("--length <length>", "Length hint"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating slide deck...").start();
@@ -117,7 +117,7 @@ export function buildGenerateCommands(program: Command): void {
       .requiredOption("--slide <n>", "Slide number to revise"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Revising slide...").start();
@@ -146,7 +146,7 @@ export function buildGenerateCommands(program: Command): void {
       .option("--quantity <n>", "Number of questions"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating quiz...").start();
@@ -175,7 +175,7 @@ export function buildGenerateCommands(program: Command): void {
       .option("--quantity <n>", "Number of cards"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating flashcards...").start();
@@ -204,7 +204,7 @@ export function buildGenerateCommands(program: Command): void {
       .option("--detail <d>", "Detail level: low|medium|high"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating infographic...").start();
@@ -231,7 +231,7 @@ export function buildGenerateCommands(program: Command): void {
       .description("Generate a data table"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating data table...").start();
@@ -254,7 +254,7 @@ export function buildGenerateCommands(program: Command): void {
     genCmd.command("mind-map").description("Generate a mind map"),
   ).action(
     action(async (opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating mind map...").start();
@@ -280,7 +280,7 @@ export function buildGenerateCommands(program: Command): void {
       .option("--append", "Append to existing report"),
   ).action(
     action(async (description, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+      const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
       const spinner = ora("Generating report...").start();

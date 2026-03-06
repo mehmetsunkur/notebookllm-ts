@@ -17,7 +17,7 @@ export function buildNoteCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const notes = await client.notes.list(notebookId);
@@ -50,7 +50,7 @@ export function buildNoteCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (content, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const note = await client.notes.create(notebookId, content);
@@ -69,7 +69,7 @@ export function buildNoteCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (noteId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const note = await client.notes.get(notebookId, noteId);
@@ -88,7 +88,7 @@ export function buildNoteCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (noteId, title, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const note = await client.notes.rename(notebookId, noteId, title);
@@ -106,7 +106,7 @@ export function buildNoteCommands(program: Command): void {
     .option("-y, --yes", "Skip confirmation")
     .action(
       action(async (noteId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
 
@@ -136,7 +136,7 @@ export function buildNoteCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (noteId, content, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const note = await client.notes.save(notebookId, noteId, content);

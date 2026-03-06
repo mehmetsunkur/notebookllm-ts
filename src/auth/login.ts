@@ -45,7 +45,7 @@ export async function login(options: LoginOptions = {}): Promise<string> {
     ignoreDefaultArgs: ["--enable-automation"],
   });
 
-  const page = context.pages[0] ?? await context.newPage();
+  const page = context.pages()[0] ?? await context.newPage();
   await page.goto(NOTEBOOKLM_URL);
 
   console.log("\nInstructions:");

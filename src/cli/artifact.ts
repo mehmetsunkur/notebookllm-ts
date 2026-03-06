@@ -19,7 +19,7 @@ export function buildArtifactCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const artifacts = await client.artifacts.list(
@@ -56,7 +56,7 @@ export function buildArtifactCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (artifactId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const artifact = await client.artifacts.get(notebookId, artifactId);
@@ -79,7 +79,7 @@ export function buildArtifactCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (artifactId, title, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const artifact = await client.artifacts.rename(notebookId, artifactId, title);
@@ -97,7 +97,7 @@ export function buildArtifactCommands(program: Command): void {
     .option("-y, --yes", "Skip confirmation")
     .action(
       action(async (artifactId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
 
@@ -129,7 +129,7 @@ export function buildArtifactCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (artifactId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const result = await client.artifacts.export(
@@ -153,7 +153,7 @@ export function buildArtifactCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (taskId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const task = await client.artifacts.poll(taskId);
         printOrJson(task, opts.json || globalOpts.json, (t) => {
@@ -175,7 +175,7 @@ export function buildArtifactCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (artifactId, opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
 
@@ -202,7 +202,7 @@ export function buildArtifactCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
-        const globalOpts = cmd.parent?.parent?.opts<GlobalOptions>() ?? {};
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
         const suggestions = await client.artifacts.suggestions(notebookId, opts.source);

@@ -20,6 +20,11 @@ export interface CoreOptions {
   verbose?: boolean;
 }
 
+export interface RPCOptions {
+  sourcePath?: string;
+  allowNull?: boolean;
+}
+
 const USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
@@ -45,7 +50,7 @@ export class ClientCore {
   }
 
   /** Execute a single RPC call and return the decoded result. */
-  protected async rpc(method: string, payload: unknown): Promise<unknown> {
+  protected async rpc(method: string, payload: unknown, options: RPCOptions = {}): Promise<unknown> {
     await this.ensureAuth();
 
     const { url, body } = encodeRequest({
@@ -55,6 +60,7 @@ export class ClientCore {
       sid: this.tokens!.fdrfje,
       bl: this.tokens!.cfb2h,
       hl: this.language,
+      sourcePath: options.sourcePath,
     });
 
     if (this.verbose) {
@@ -90,7 +96,7 @@ export class ClientCore {
       console.error(`[RPC] ${method} response (${text.length} bytes)`);
     }
 
-    return decodeResponse(text, method);
+    return decodeResponse(text, method, options.allowNull ?? false);
   }
 
   /**

@@ -10,22 +10,31 @@ export class NotebooksAPI extends ClientCore {
   }
 
   async create(title: string): Promise<Notebook> {
-    const raw = await this.rpc(RPCMethod.CREATE_NOTEBOOK, [title]);
+    const raw = await this.rpc(RPCMethod.CREATE_NOTEBOOK, [title, null, null, [2], [1]]);
     return parseNotebook(raw);
   }
 
   async delete(notebookId: string): Promise<void> {
-    await this.rpc(RPCMethod.DELETE_NOTEBOOK, [notebookId]);
+    await this.rpc(RPCMethod.DELETE_NOTEBOOK, [[notebookId], [2]]);
   }
 
   async rename(notebookId: string, newTitle: string): Promise<Notebook> {
-    const raw = await this.rpc(RPCMethod.RENAME_NOTEBOOK, [notebookId, newTitle]);
-    return parseNotebook(raw);
+    await this.rpc(
+      RPCMethod.RENAME_NOTEBOOK,
+      [notebookId, [[null, null, null, [null, newTitle]]]],
+      { allowNull: true, sourcePath: "/" },
+    );
+    return this.get(notebookId);
   }
 
   async get(notebookId: string): Promise<Notebook> {
-    const raw = await this.rpc(RPCMethod.GET_NOTEBOOK, [notebookId]);
-    return parseNotebook(raw);
+    const raw = await this.rpc(
+      RPCMethod.GET_NOTEBOOK,
+      [notebookId, null, [2], null, 0],
+      { sourcePath: `/notebook/${notebookId}` },
+    );
+    const arr = Array.isArray(raw) && Array.isArray(raw[0]) ? raw[0] : raw;
+    return parseNotebook(arr);
   }
 
   async summary(notebookId: string): Promise<string> {

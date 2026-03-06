@@ -11,13 +11,24 @@ export class SharingAPI extends ClientCore {
   }
 
   async setPublic(notebookId: string, enable: boolean): Promise<ShareSettings> {
-    const raw = await this.rpc(RPCMethod.SHARE_PUBLIC, [notebookId, enable]);
-    return parseShareSettings(raw);
+    const access = enable ? 1 : 0;
+    await this.rpc(
+      RPCMethod.SHARE_NOTEBOOK,
+      [[[notebookId, null, [access], [access, ""]]], 1, null, [2]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+    return this.status(notebookId);
   }
 
   async setViewLevel(notebookId: string, level: "view" | "comment" | "edit"): Promise<ShareSettings> {
-    const raw = await this.rpc(RPCMethod.SHARE_VIEW_LEVEL, [notebookId, level]);
-    return parseShareSettings(raw);
+    const viewLevelCode = level === "view" ? 0 : 1;
+    await this.rpc(
+      RPCMethod.RENAME_NOTEBOOK,
+      [notebookId, [[null, null, null, null, null, null, null, null, [[viewLevelCode]]]]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+    const current = await this.status(notebookId);
+    return { ...current, viewLevel: level };
   }
 
   async addCollaborator(
@@ -25,13 +36,18 @@ export class SharingAPI extends ClientCore {
     email: string,
     options: { permission?: Permission; notify?: boolean } = {},
   ): Promise<ShareSettings> {
-    const raw = await this.rpc(RPCMethod.SHARE_ADD, [
-      notebookId,
-      email,
-      options.permission ?? "viewer",
-      options.notify ?? true,
-    ]);
-    return parseShareSettings(raw);
+    const permissionCode = permissionToCode(options.permission ?? "viewer");
+    await this.rpc(
+      RPCMethod.SHARE_NOTEBOOK,
+      [[[
+        notebookId,
+        [[email, null, permissionCode]],
+        null,
+        [1, ""],
+      ]], options.notify === false ? 0 : 1, null, [2]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+    return this.status(notebookId);
   }
 
   async updateCollaborator(
@@ -39,13 +55,19 @@ export class SharingAPI extends ClientCore {
     email: string,
     permission: Permission,
   ): Promise<ShareSettings> {
-    const raw = await this.rpc(RPCMethod.SHARE_UPDATE, [notebookId, email, permission]);
-    return parseShareSettings(raw);
+    return this.addCollaborator(notebookId, email, {
+      permission,
+      notify: false,
+    });
   }
 
   async removeCollaborator(notebookId: string, email: string): Promise<ShareSettings> {
-    const raw = await this.rpc(RPCMethod.SHARE_REMOVE, [notebookId, email]);
-    return parseShareSettings(raw);
+    await this.rpc(
+      RPCMethod.SHARE_NOTEBOOK,
+      [[[notebookId, [[email, null, 4]], null, [0, ""]]], 0, null, [2]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+    return this.status(notebookId);
   }
 }
 
@@ -80,4 +102,9 @@ function parseShareSettings(raw: unknown): ShareSettings {
   const viewLevel: ShareSettings["viewLevel"] = "view";
 
   return { isPublic, shareLink, viewLevel, collaborators };
+}
+
+function permissionToCode(permission: Permission): number {
+  if (permission === "editor") return 2;
+  return 3;
 }

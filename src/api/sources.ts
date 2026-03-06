@@ -4,7 +4,6 @@ import type { Source, SourceFullText } from "../types.ts";
 import { SourceNotFoundError, SourceAddError, SourceTimeoutError } from "../exceptions.ts";
 
 const UPLOAD_URL = "https://notebooklm.google.com/upload/";
-const CHUNK_SIZE = 64 * 1024; // 64KB chunks
 
 export class SourcesAPI extends ClientCore {
   async list(notebookId: string): Promise<Source[]> {
@@ -24,17 +23,60 @@ export class SourcesAPI extends ClientCore {
   }
 
   async addUrl(notebookId: string, url: string): Promise<Source> {
-    const raw = await this.rpc(RPCMethod.ADD_SOURCE_URL, [notebookId, url]);
+    const isYoutube = isYoutubeUrl(url);
+    const payload = isYoutube
+      ? [
+          [[null, null, null, null, null, null, null, [url], null, null, 1]],
+          notebookId,
+          [2],
+          [1, null, null, null, null, null, null, null, null, null, [1]],
+        ]
+      : [
+          [[null, null, [url], null, null, null, null, null]],
+          notebookId,
+          [2],
+          null,
+          null,
+        ];
+    const raw = await this.rpc(RPCMethod.ADD_SOURCE, payload, {
+      sourcePath: `/notebook/${notebookId}`,
+      allowNull: isYoutube,
+    });
     return parseSource(raw);
   }
 
   async addText(notebookId: string, title: string, content: string): Promise<Source> {
-    const raw = await this.rpc(RPCMethod.ADD_SOURCE_TEXT, [notebookId, title, content]);
+    const raw = await this.rpc(
+      RPCMethod.ADD_SOURCE,
+      [
+        [[null, [title, content], null, null, null, null, null, null]],
+        notebookId,
+        [2],
+        null,
+        null,
+      ],
+      { sourcePath: `/notebook/${notebookId}` },
+    );
     return parseSource(raw);
   }
 
   async addDrive(notebookId: string, driveId: string, title: string): Promise<Source> {
-    const raw = await this.rpc(RPCMethod.ADD_SOURCE_DRIVE, [notebookId, driveId, title]);
+    const sourceData = [
+      driveId,
+      "application/vnd.google-apps.document",
+      1,
+      title,
+    ];
+    const raw = await this.rpc(
+      RPCMethod.ADD_SOURCE,
+      [
+        [sourceData],
+        notebookId,
+        [2],
+        [1, null, null, null, null, null, null, null, null, null, [1]],
+      ],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
     return parseSource(raw);
   }
 
@@ -45,24 +87,33 @@ export class SourcesAPI extends ClientCore {
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const mimeType = guessMimeType(filePath);
     const fileName = title ?? filePath.split("/").pop() ?? "upload";
 
-    // Start upload
-    const uploadToken = await this.uploadFile(
-      UPLOAD_URL,
-      bytes,
-      mimeType,
-      bytes.length,
+    const registerRaw = await this.rpc(
+      RPCMethod.ADD_SOURCE_FILE,
+      [
+        [[fileName]],
+        notebookId,
+        [2],
+        [1, null, null, null, null, null, null, null, null, null, [1]],
+      ],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
     );
+    const sourceId = extractNestedString(registerRaw);
+    if (!sourceId) {
+      throw new SourceAddError(`Failed to register source for file: ${fileName}`);
+    }
 
-    const raw = await this.rpc(RPCMethod.ADD_SOURCE_FILE, [
+    const uploadUrl = await this.startResumableUpload(
       notebookId,
-      uploadToken,
       fileName,
-      mimeType,
-    ]);
-    return parseSource(raw);
+      bytes.length,
+      sourceId,
+    );
+    await this.uploadRegisteredFile(uploadUrl, bytes);
+
+    const source = await this.get(notebookId, sourceId);
+    return { ...source, id: sourceId, title: source.title || fileName };
   }
 
   async addResearch(
@@ -70,14 +121,21 @@ export class SourcesAPI extends ClientCore {
     query: string,
     options: { mode?: string; from?: string; importAll?: boolean } = {},
   ): Promise<Source> {
-    const raw = await this.rpc(RPCMethod.ADD_SOURCE_RESEARCH, [
-      notebookId,
-      query,
-      options.mode ?? "standard",
-      options.from ?? null,
-      options.importAll ?? false,
-    ]);
-    return parseSource(raw);
+    const mode = (options.mode ?? "fast").toLowerCase();
+    const rpcMethod = mode === "deep" ? RPCMethod.START_DEEP_RESEARCH : RPCMethod.START_FAST_RESEARCH;
+    const startPayload =
+      mode === "deep"
+        ? [null, [1], [query, 1], 5, notebookId]
+        : [[query, 1], null, 1, notebookId];
+    await this.rpc(rpcMethod, startPayload, {
+      sourcePath: `/notebook/${notebookId}`,
+    });
+    return {
+      id: "",
+      title: query,
+      type: "research",
+      status: "processing",
+    };
   }
 
   async delete(notebookId: string, sourceId: string): Promise<void> {
@@ -103,6 +161,19 @@ export class SourcesAPI extends ClientCore {
       { sourcePath: `/notebook/${notebookId}`, allowNull: true },
     );
     return this.get(notebookId, sourceId);
+  }
+
+  async checkFreshness(notebookId: string, sourceId: string): Promise<boolean> {
+    const raw = await this.rpc(
+      RPCMethod.CHECK_SOURCE_FRESHNESS,
+      [null, [sourceId], [2]],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+    if (raw === true) return true;
+    if (raw === false) return false;
+    if (Array.isArray(raw) && raw.length === 0) return true;
+    if (Array.isArray(raw) && Array.isArray(raw[0]) && raw[0][1] === true) return true;
+    return false;
   }
 
   async fulltext(notebookId: string, sourceId: string): Promise<SourceFullText> {
@@ -166,15 +237,83 @@ export class SourcesAPI extends ClientCore {
     }
     return match;
   }
+
+  private async startResumableUpload(
+    notebookId: string,
+    filename: string,
+    fileSize: number,
+    sourceId: string,
+  ): Promise<string> {
+    await this.ensureAuth();
+
+    const response = await fetch(`${UPLOAD_URL}_/?authuser=0`, {
+      method: "POST",
+      headers: {
+        Accept: "*/*",
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Cookie: this.getCookieHeader(),
+        Origin: "https://notebooklm.google.com",
+        Referer: "https://notebooklm.google.com/",
+        "x-goog-authuser": "0",
+        "x-goog-upload-command": "start",
+        "x-goog-upload-header-content-length": String(fileSize),
+        "x-goog-upload-protocol": "resumable",
+      },
+      body: JSON.stringify({
+        PROJECT_ID: notebookId,
+        SOURCE_NAME: filename,
+        SOURCE_ID: sourceId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new SourceAddError(`Failed to start upload: HTTP ${response.status}`);
+    }
+    const uploadUrl = response.headers.get("x-goog-upload-url");
+    if (!uploadUrl) {
+      throw new SourceAddError("Missing upload URL for resumable upload");
+    }
+    return uploadUrl;
+  }
+
+  private async uploadRegisteredFile(uploadUrl: string, bytes: Uint8Array): Promise<void> {
+    await this.ensureAuth();
+
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        Cookie: this.getCookieHeader(),
+        "x-goog-upload-command": "upload, finalize",
+        "x-goog-upload-offset": "0",
+        "Content-Type": "application/octet-stream",
+      },
+      body: bytes as unknown as BodyInit,
+    });
+    if (!response.ok) {
+      throw new SourceAddError(`File upload failed: HTTP ${response.status}`);
+    }
+  }
 }
 
 // --- Parsers ---
 
 function parseSource(raw: unknown): Source {
+  if (typeof raw === "string") {
+    const parsed = parseCompactSourceRow(raw);
+    if (parsed) return parsed;
+    return { id: "", title: raw };
+  }
   if (!Array.isArray(raw)) {
     return { id: "", title: String(raw) };
   }
   const arr = raw as unknown[];
+  if (Array.isArray(arr[0])) {
+    return parseSource(arr[0]);
+  }
+  if (typeof arr[0] === "string" && arr[0].includes(",")) {
+    const parsed = parseCompactSourceRow(arr[0]);
+    if (parsed) return parsed;
+  }
   return {
     id: String(arr[0] ?? ""),
     title: String(arr[1] ?? ""),
@@ -183,6 +322,23 @@ function parseSource(raw: unknown): Source {
     url: typeof arr[4] === "string" ? arr[4] : undefined,
     createdMs: typeof arr[5] === "number" ? arr[5] : undefined,
   };
+}
+
+function parseCompactSourceRow(value: string): Source | null {
+  const parts = value.split(",");
+  if (parts.length < 2) return null;
+  const id = parts[0]?.trim() ?? "";
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const title = parts[1]?.trim() ?? "";
+  return { id, title, status: "processing" };
+}
+
+function extractNestedString(value: unknown): string | undefined {
+  if (typeof value === "string" && value.length > 0) return value;
+  if (Array.isArray(value) && value.length > 0) {
+    return extractNestedString(value[0]);
+  }
+  return undefined;
 }
 
 function parseSourceList(raw: unknown): Source[] {
@@ -284,4 +440,8 @@ function guessMimeType(filePath: string): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isYoutubeUrl(url: string): boolean {
+  return /(?:youtube\.com|youtu\.be)/i.test(url);
 }

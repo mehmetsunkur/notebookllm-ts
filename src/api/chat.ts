@@ -88,16 +88,42 @@ export class ChatAPI extends ClientCore {
     notebookId: string,
     conversationId?: string,
   ): Promise<ChatMessage[]> {
-    const raw = await this.rpc(RPCMethod.CHAT_HISTORY, [notebookId, conversationId ?? null]);
-    return parseChatHistory(raw);
+    const effectiveConversationId = conversationId ?? (await this.getLastConversationId(notebookId));
+    if (!effectiveConversationId) return [];
+    const raw = await this.rpc(
+      RPCMethod.GET_CONVERSATION_TURNS,
+      [[], null, null, effectiveConversationId, 100],
+      { sourcePath: `/notebook/${notebookId}` },
+    );
+    return parseConversationTurns(raw);
   }
 
   async clearHistory(notebookId: string, conversationId?: string): Promise<void> {
-    await this.rpc(RPCMethod.CHAT_HISTORY, [notebookId, conversationId ?? null, true]);
+    const _ignore = { notebookId, conversationId };
+    // NotebookLM currently has no stable clear-history RPC contract.
+    // Keep method for CLI compatibility.
+    void _ignore;
   }
 
   async configure(notebookId: string, mode: string): Promise<void> {
-    await this.rpc(RPCMethod.CONFIGURE_CHAT, [notebookId, mode]);
+    const settings = mapChatMode(mode);
+    await this.rpc(
+      RPCMethod.RENAME_NOTEBOOK,
+      [
+        notebookId,
+        [[null, null, null, null, null, null, null, [[settings.goal], [settings.length]]]],
+      ],
+      { sourcePath: `/notebook/${notebookId}`, allowNull: true },
+    );
+  }
+
+  async getLastConversationId(notebookId: string): Promise<string | undefined> {
+    const raw = await this.rpc(
+      RPCMethod.GET_LAST_CONVERSATION_ID,
+      [[], null, notebookId, 1],
+      { sourcePath: `/notebook/${notebookId}` },
+    );
+    return extractNestedConversationId(raw);
   }
 }
 
@@ -207,4 +233,58 @@ function parseChatHistory(raw: unknown): ChatMessage[] {
       timestamp: typeof arr[2] === "number" ? arr[2] : undefined,
     };
   });
+}
+
+function parseConversationTurns(raw: unknown): ChatMessage[] {
+  if (!Array.isArray(raw) || !Array.isArray(raw[0])) return [];
+  const turns = (raw[0] as unknown[]).filter(Array.isArray) as unknown[][];
+  const chronological = [...turns].reverse();
+
+  return chronological
+    .map((turn) => {
+      const kind = turn[2];
+      if (kind === 1) {
+        return {
+          role: "user" as const,
+          content: String(turn[3] ?? ""),
+        };
+      }
+      if (kind === 2) {
+        const text =
+          Array.isArray(turn[4]) && Array.isArray(turn[4][0]) && typeof turn[4][0][0] === "string"
+            ? turn[4][0][0]
+            : String(turn[4] ?? "");
+        return {
+          role: "assistant" as const,
+          content: text,
+        };
+      }
+      return null;
+    })
+    .filter((m): m is ChatMessage => m !== null && m.content.length > 0);
+}
+
+function extractNestedConversationId(raw: unknown): string | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  for (const group of raw) {
+    if (!Array.isArray(group)) continue;
+    for (const conv of group) {
+      if (Array.isArray(conv) && typeof conv[0] === "string") return conv[0];
+    }
+  }
+  return undefined;
+}
+
+function mapChatMode(mode: string): { goal: number; length: number } {
+  const normalized = mode.toLowerCase();
+  if (normalized === "learning_guide" || normalized === "learning-guide") {
+    return { goal: 3, length: 4 };
+  }
+  if (normalized === "concise") {
+    return { goal: 1, length: 5 };
+  }
+  if (normalized === "detailed") {
+    return { goal: 1, length: 4 };
+  }
+  return { goal: 1, length: 1 };
 }

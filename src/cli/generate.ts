@@ -1,7 +1,7 @@
 // Generate commands: audio, video, quiz, flashcards, infographic, slide-deck,
 //                   revise-slide, data-table, mind-map, report
 
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import chalk from "chalk";
 import ora from "ora";
 import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
@@ -25,8 +25,8 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("audio [description]")
       .description("Generate an Audio Overview")
-      .option("--format <fmt>", "Audio format")
-      .option("--length <length>", "Length hint (short|medium|long)"),
+      .addOption(new Option("--format <fmt>", "Audio format").choices(["deep-dive", "brief", "critique", "debate"]).default("deep-dive"))
+      .addOption(new Option("--length <length>", "Audio length").choices(["short", "default", "long"]).default("default")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
@@ -55,8 +55,8 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("video [description]")
       .description("Generate a Video Overview")
-      .option("--format <fmt>", "Video format")
-      .option("--style <style>", "Video style"),
+      .addOption(new Option("--format <fmt>", "Video format").choices(["explainer", "brief"]).default("explainer"))
+      .addOption(new Option("--style <style>", "Video style").choices(["auto", "classic", "whiteboard", "kawaii", "anime", "watercolor", "retro-print", "heritage", "paper-craft"]).default("auto")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
@@ -84,8 +84,8 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("slide-deck [description]")
       .description("Generate a slide deck")
-      .option("--format <fmt>", "Slide format")
-      .option("--length <length>", "Length hint"),
+      .addOption(new Option("--format <fmt>", "Slide format").choices(["detailed", "presenter"]).default("detailed"))
+      .addOption(new Option("--length <length>", "Slide length").choices(["default", "short"]).default("default")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
@@ -142,8 +142,8 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("quiz [description]")
       .description("Generate a quiz")
-      .option("--difficulty <level>", "Difficulty: easy|medium|hard")
-      .option("--quantity <n>", "Number of questions"),
+      .addOption(new Option("--difficulty <level>", "Difficulty").choices(["easy", "medium", "hard"]).default("medium"))
+      .addOption(new Option("--quantity <qty>", "Question count").choices(["fewer", "standard", "more"]).default("standard")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
@@ -153,7 +153,7 @@ export function buildGenerateCommands(program: Command): void {
       const result = await client.generate.generateQuiz(notebookId, {
         description,
         difficulty: opts.difficulty,
-        quantity: opts.quantity ? parseInt(opts.quantity, 10) : undefined,
+        quantity: opts.quantity,
         sourceIds: opts.source,
         language: opts.language,
         wait: opts.wait,
@@ -171,8 +171,8 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("flashcards [description]")
       .description("Generate flashcards")
-      .option("--difficulty <level>", "Difficulty: easy|medium|hard")
-      .option("--quantity <n>", "Number of cards"),
+      .addOption(new Option("--difficulty <level>", "Difficulty").choices(["easy", "medium", "hard"]).default("medium"))
+      .addOption(new Option("--quantity <qty>", "Card count").choices(["fewer", "standard", "more"]).default("standard")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
@@ -182,7 +182,7 @@ export function buildGenerateCommands(program: Command): void {
       const result = await client.generate.generateFlashcards(notebookId, {
         description,
         difficulty: opts.difficulty,
-        quantity: opts.quantity ? parseInt(opts.quantity, 10) : undefined,
+        quantity: opts.quantity,
         sourceIds: opts.source,
         language: opts.language,
         wait: opts.wait,
@@ -200,8 +200,8 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("infographic [description]")
       .description("Generate an infographic")
-      .option("--orientation <o>", "Orientation: portrait|landscape")
-      .option("--detail <d>", "Detail level: low|medium|high"),
+      .addOption(new Option("--orientation <o>", "Orientation").choices(["landscape", "portrait", "square"]).default("landscape"))
+      .addOption(new Option("--detail <d>", "Detail level").choices(["concise", "standard", "detailed"]).default("standard")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
@@ -276,13 +276,19 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("report [description]")
       .description("Generate a report")
-      .option("--format <fmt>", "Report format")
-      .option("--append", "Append to existing report"),
+      .addOption(new Option("--format <fmt>", "Report format").choices(["briefing-doc", "study-guide", "blog-post", "custom"]).default("briefing-doc"))
+      .option("--append <text>", "Append extra instructions to the built-in prompt (ignored with --format custom)"),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+
+      if (opts.append && opts.format === "custom") {
+        process.stderr.write("Warning: --append has no effect with --format custom. Use the description argument instead.\n");
+        opts.append = undefined;
+      }
+
       const spinner = ora("Generating report...").start();
       const result = await client.generate.generateReport(notebookId, {
         description,

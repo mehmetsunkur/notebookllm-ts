@@ -27,6 +27,8 @@ const JUNK_PREFIX = ")]}'\n";
  * Strip the )]}' prefix and split the response into raw JSON chunks.
  */
 export function splitChunks(responseText: string): string[] {
+  if (!responseText || responseText.trim() === "") return [];
+
   let text = responseText;
   if (text.startsWith(JUNK_PREFIX)) {
     text = text.slice(JUNK_PREFIX.length);
@@ -34,30 +36,31 @@ export function splitChunks(responseText: string): string[] {
     text = text.slice(5);
   }
 
+  // Google's chunked format alternates:
+  // <size line>\n
+  // <json line>\n
+  // ...but byte counts are not reliable with UTF-8 char slicing, so parse line-wise.
+  const lines = text.split("\n");
   const chunks: string[] = [];
-  let i = 0;
 
-  while (i < text.length) {
-    // Read size line
-    const newline = text.indexOf("\n", i);
-    if (newline === -1) break;
-    const sizeLine = text.slice(i, newline).trim();
-    if (!sizeLine) {
-      i = newline + 1;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const size = parseInt(line, 10);
+    if (!Number.isNaN(size)) {
+      const next = lines[i + 1];
+      if (next && next.trim()) {
+        chunks.push(next);
+      }
+      i += 1;
       continue;
     }
-    const size = parseInt(sizeLine, 10);
-    if (isNaN(size) || size <= 0) {
-      i = newline + 1;
-      continue;
+
+    // Fallback: sometimes non-size JSON lines can appear directly.
+    if (line.startsWith("[") || line.startsWith("{")) {
+      chunks.push(line);
     }
-    i = newline + 1;
-    // Read <size> bytes of JSON
-    const chunk = text.slice(i, i + size);
-    chunks.push(chunk);
-    i += size;
-    // Skip trailing newline
-    if (text[i] === "\n") i++;
   }
 
   return chunks;

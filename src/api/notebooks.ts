@@ -5,7 +5,7 @@ import { NotebookNotFoundError } from "../exceptions.ts";
 
 export class NotebooksAPI extends ClientCore {
   async list(): Promise<Notebook[]> {
-    const raw = await this.rpc(RPCMethod.LIST_NOTEBOOKS, []);
+    const raw = await this.rpc(RPCMethod.LIST_NOTEBOOKS, [null, 1, null, [2]]);
     return parseNotebookList(raw);
   }
 
@@ -55,14 +55,23 @@ function parseNotebook(raw: unknown): Notebook {
   if (!Array.isArray(raw)) {
     return { id: "", title: String(raw) };
   }
-  // Typical NotebookLM response: [[id, title, ...], ...]
-  const arr = raw as unknown[];
-  const id = String(arr[0] ?? "");
-  const title = String(arr[1] ?? "");
-  const createdMs = typeof arr[4] === "number" ? arr[4] : undefined;
-  const updatedMs = typeof arr[5] === "number" ? arr[5] : undefined;
 
-  return { id, title, createdMs, updatedMs };
+  // Current NotebookLM list shape (matches notebooklm-py):
+  // [title, sources, notebook_id, ..., meta]
+  const arr = raw as unknown[];
+  const titleRaw = typeof arr[0] === "string" ? arr[0] : "";
+  const id = typeof arr[2] === "string" ? arr[2] : "";
+  const title = titleRaw.replace("thought\n", "").trim();
+
+  const sourceCount = Array.isArray(arr[1]) ? arr[1].length : undefined;
+
+  let createdMs: number | undefined;
+  const meta = arr[5];
+  if (Array.isArray(meta) && Array.isArray(meta[5]) && typeof meta[5][0] === "number") {
+    createdMs = Math.round(meta[5][0] * 1000);
+  }
+
+  return { id, title, sourceCount, createdMs };
 }
 
 function parseNotebookList(raw: unknown): Notebook[] {
@@ -74,5 +83,6 @@ function parseNotebookList(raw: unknown): Notebook[] {
 
   return list
     .filter((item) => Array.isArray(item))
-    .map((item) => parseNotebook(item));
+    .map((item) => parseNotebook(item))
+    .filter((nb) => nb.id && nb.title);
 }

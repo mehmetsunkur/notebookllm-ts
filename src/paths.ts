@@ -22,6 +22,10 @@ export function getConfigPath(homeDir?: string): string {
   return path.join(homeDir ?? getHomeDir(), "config.json");
 }
 
+export function getBrowserProfileDir(homeDir?: string): string {
+  return path.join(homeDir ?? getHomeDir(), "browser_profile");
+}
+
 export async function ensureHomeDir(homeDir?: string): Promise<string> {
   const dir = homeDir ?? getHomeDir();
   await Bun.file(dir).exists().catch(() => false);

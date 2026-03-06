@@ -9,7 +9,7 @@
   "scripts": {
     "start": "bun run src/cli/index.ts",
     "test": "bun test",
-    "build": "bun build --compile --external chromium-bidi --external electron src/cli/index.ts --outfile notebooklm",
+    "build": "bun build --compile --external playwright --external playwright-core --external chromium-bidi --external electron src/cli/index.ts --outfile notebooklm",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

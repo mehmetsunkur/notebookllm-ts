@@ -3,6 +3,7 @@
 // then saves the session cookies in Playwright's storage_state.json format.
 
 import { ensureHomeDir, getBrowserProfileDir, getStoragePath } from "../paths.ts";
+import { loadPlaywright } from "./playwright-loader.ts";
 import { mkdir } from "fs/promises";
 
 const NOTEBOOKLM_URL = "https://notebooklm.google.com/";
@@ -19,9 +20,8 @@ export interface LoginOptions {
  * Saves the resulting session to storage_state.json.
  */
 export async function login(options: LoginOptions = {}): Promise<string> {
-  const { chromium } = await import("playwright");
-
   const homeDir = await ensureHomeDir(options.homeDir);
+  const { chromium } = await loadPlaywright(homeDir);
   const storagePath = getStoragePath(homeDir);
   const browserProfileDir = getBrowserProfileDir(homeDir);
 

@@ -9,7 +9,7 @@ describe("extractTokensFromHtml", () => {
     return `
       <script>
         window.WIZ_global_data = {
-          "SNLM0e": "${snlm0e}",
+          "SNlM0e": "${snlm0e}",
           "FdrFJe": "${fdrfje}",
           "cfb2h": "${cfb2h}",
           "other": "value"
@@ -26,17 +26,17 @@ describe("extractTokensFromHtml", () => {
     expect(tokens.cfb2h).toBe("bl789");
   });
 
-  it("throws AuthError if SNLM0e is missing", () => {
+  it("throws AuthError if SNlM0e is missing", () => {
     const html = `
       <script>{"FdrFJe": "sid", "cfb2h": "bl"}</script>
     `;
     expect(() => extractTokensFromHtml(html)).toThrow(AuthError);
-    expect(() => extractTokensFromHtml(html)).toThrow(/SNLM0e/);
+    expect(() => extractTokensFromHtml(html)).toThrow(/SNlM0e/);
   });
 
   it("throws AuthError if FdrFJe is missing", () => {
     const html = `
-      <script>{"SNLM0e": "csrf", "cfb2h": "bl"}</script>
+      <script>{"SNlM0e": "csrf", "cfb2h": "bl"}</script>
     `;
     expect(() => extractTokensFromHtml(html)).toThrow(AuthError);
     expect(() => extractTokensFromHtml(html)).toThrow(/FdrFJe/);
@@ -44,14 +44,14 @@ describe("extractTokensFromHtml", () => {
 
   it("throws AuthError if cfb2h is missing", () => {
     const html = `
-      <script>{"SNLM0e": "csrf", "FdrFJe": "sid"}</script>
+      <script>{"SNlM0e": "csrf", "FdrFJe": "sid"}</script>
     `;
     expect(() => extractTokensFromHtml(html)).toThrow(AuthError);
     expect(() => extractTokensFromHtml(html)).toThrow(/cfb2h/);
   });
 
   it("handles single-quoted tokens", () => {
-    const html = `var d={'SNLM0e':'csrf_val','FdrFJe':'sid_val','cfb2h':'bl_val'};`;
+    const html = `var d={'SNlM0e':'csrf_val','FdrFJe':'sid_val','cfb2h':'bl_val'};`;
     const tokens = extractTokensFromHtml(html);
     expect(tokens.snlm0e).toBe("csrf_val");
     expect(tokens.fdrfje).toBe("sid_val");

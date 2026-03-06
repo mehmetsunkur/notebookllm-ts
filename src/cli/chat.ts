@@ -13,7 +13,9 @@ export function buildChatCommands(program: Command): void {
     .description("Ask a question about the active notebook")
     .option("-n, --notebook <id>", "Notebook ID")
     .option("-s, --source <id...>", "Limit to specific source IDs")
+    .option("-c, --conversation-id <id>", "Continue a specific conversation (overrides stored context)")
     .option("--save-as-note", "Save the response as a note")
+    .option("--note-title <title>", "Title for the saved note (use with --save-as-note)")
     .option("--json", "Output as JSON")
     .action(
       action(async (question, opts, cmd) => {
@@ -22,11 +24,14 @@ export function buildChatCommands(program: Command): void {
         const notebookId = await requireNotebookId(client, opts.notebook);
         const ctx = await client.loadContext();
 
+        // Explicit --conversation-id overrides the stored context value
+        const conversationId = opts.conversationId ?? ctx.conversationId;
+
         const spinner = ora("Thinking...").start();
         let response;
         try {
           response = await client.chat.ask(notebookId, question, {
-            conversationId: ctx.conversationId,
+            conversationId,
             sourceIds: opts.source,
             saveAsNote: opts.saveAsNote,
           });

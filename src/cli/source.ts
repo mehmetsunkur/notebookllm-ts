@@ -1,10 +1,10 @@
 // Source commands: list, add, get, delete, rename, refresh, fulltext, guide, wait
 
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveSourceId } from "./options.ts";
 import type { GlobalOptions } from "../types.ts";
 
 export function buildSourceCommands(program: Command): void {
@@ -91,17 +91,26 @@ export function buildSourceCommands(program: Command): void {
     );
 
   // source add-drive <id> <title>
+  const DRIVE_MIME_TYPES: Record<string, string> = {
+    "google-doc": "application/vnd.google-apps.document",
+    "google-slides": "application/vnd.google-apps.presentation",
+    "google-sheets": "application/vnd.google-apps.spreadsheet",
+    "pdf": "application/pdf",
+  };
+
   sourceCmd
     .command("add-drive <driveId> <title>")
     .description("Add a Google Drive document as a source")
     .option("-n, --notebook <id>", "Notebook ID")
+    .addOption(new Option("--mime-type <type>", "Document type").choices(["google-doc", "google-slides", "google-sheets", "pdf"]).default("google-doc"))
     .option("--json", "Output as JSON")
     .action(
       action(async (driveId, title, opts, cmd) => {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const source = await client.sources.addDrive(notebookId, driveId, title);
+        const mimeType = DRIVE_MIME_TYPES[opts.mimeType];
+        const source = await client.sources.addDrive(notebookId, driveId, title, mimeType);
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(chalk.green(`Drive source added: ${s.id}`));
         });
@@ -180,12 +189,12 @@ export function buildSourceCommands(program: Command): void {
   // source add-research <query>
   sourceCmd
     .command("add-research <query>")
-    .description("Add research sources based on a query")
+    .description("Search web or drive and add sources from results")
     .option("-n, --notebook <id>", "Notebook ID")
-    .option("--mode <mode>", "Research mode", "standard")
-    .option("--from <date>", "Start date for research")
+    .addOption(new Option("--from <backend>", "Search backend").choices(["web", "drive"]).default("web"))
+    .addOption(new Option("--mode <mode>", "Search mode").choices(["fast", "deep"]).default("fast"))
     .option("--import-all", "Import all research results")
-    .option("--no-wait", "Do not wait")
+    .option("--no-wait", "Start research and return immediately")
     .option("--json", "Output as JSON")
     .action(
       action(async (query, opts, cmd) => {
@@ -194,7 +203,7 @@ export function buildSourceCommands(program: Command): void {
         const notebookId = await requireNotebookId(client, opts.notebook);
         const source = await client.sources.addResearch(notebookId, query, {
           mode: opts.mode,
-          from: opts.from,
+          source: opts.from,
           importAll: opts.importAll,
         });
         printOrJson(source, opts.json || globalOpts.json, (s) => {
@@ -214,7 +223,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const source = await client.sources.get(notebookId, sourceId);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const source = await client.sources.get(notebookId, resolvedId);
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(`ID:     ${s.id}`);
           console.log(`Title:  ${s.title}`);
@@ -230,13 +240,22 @@ export function buildSourceCommands(program: Command): void {
     .command("fulltext <sourceId>")
     .description("Get the full text content of a source")
     .option("-n, --notebook <id>", "Notebook ID")
+    .option("-o, --output <path>", "Write content to file instead of stdout")
     .option("--json", "Output as JSON")
     .action(
       action(async (sourceId, opts, cmd) => {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const result = await client.sources.fulltext(notebookId, sourceId);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const result = await client.sources.fulltext(notebookId, resolvedId);
+
+        if (opts.output) {
+          await Bun.write(opts.output, result.content);
+          console.log(chalk.green(`Saved ${result.content.length.toLocaleString()} chars to ${opts.output}`));
+          return;
+        }
+
         if (opts.json || globalOpts.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
@@ -256,7 +275,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const guide = await client.sources.guide(notebookId, sourceId);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const guide = await client.sources.guide(notebookId, resolvedId);
         if (opts.json || globalOpts.json) {
           console.log(JSON.stringify({ guide }, null, 2));
         } else {
@@ -276,7 +296,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const source = await client.sources.rename(notebookId, sourceId, title);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const source = await client.sources.rename(notebookId, resolvedId, title);
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(chalk.green(`Renamed to: ${s.title}`));
         });
@@ -294,7 +315,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const source = await client.sources.refresh(notebookId, sourceId);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const source = await client.sources.refresh(notebookId, resolvedId);
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(chalk.green(`Source refreshed: ${s.id}`));
         });
@@ -312,12 +334,13 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
 
         if (!opts.yes) {
           const { createInterface } = await import("readline");
           const rl = createInterface({ input: process.stdin, output: process.stdout });
           const answer = await new Promise<string>((resolve) =>
-            rl.question(`Delete source ${sourceId}? (y/N) `, resolve),
+            rl.question(`Delete source ${resolvedId}? (y/N) `, resolve),
           );
           rl.close();
           if (answer.toLowerCase() !== "y") {
@@ -326,8 +349,8 @@ export function buildSourceCommands(program: Command): void {
           }
         }
 
-        await client.sources.delete(notebookId, sourceId);
-        console.log(chalk.green(`Source deleted: ${sourceId}`));
+        await client.sources.delete(notebookId, resolvedId);
+        console.log(chalk.green(`Source deleted: ${resolvedId}`));
       }),
     );
 
@@ -343,14 +366,40 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
         const spinner = ora("Waiting for source to process...").start();
-        const source = await client.sources.wait(notebookId, sourceId, {
+        const source = await client.sources.wait(notebookId, resolvedId, {
           timeoutMs: parseInt(opts.timeout, 10) * 1000,
         });
         spinner.succeed("Source ready.");
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(`Status: ${statusColor(s.status)}`);
         });
+      }),
+    );
+
+  // source stale <id>
+  sourceCmd
+    .command("stale <sourceId>")
+    .description("Check if a source is stale (exit 0 = stale, exit 1 = fresh)")
+    .option("-n, --notebook <id>", "Notebook ID")
+    .option("--json", "Output as JSON")
+    .action(
+      action(async (sourceId, opts, cmd) => {
+        const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
+        const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const fresh = await client.sources.checkFreshness(notebookId, resolvedId);
+
+        if (opts.json || globalOpts.json) {
+          console.log(JSON.stringify({ sourceId: resolvedId, stale: !fresh }));
+        } else {
+          console.log(fresh ? "fresh" : "stale");
+        }
+
+        // exit 0 = stale (truthy condition for shell if-then), exit 1 = fresh
+        process.exit(fresh ? 1 : 0);
       }),
     );
 

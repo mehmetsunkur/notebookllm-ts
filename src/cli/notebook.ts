@@ -58,21 +58,23 @@ export function buildNotebookCommands(program: Command): void {
       }),
     );
 
-  // delete <id>
+  // delete
   program
-    .command("delete <id>")
+    .command("delete")
     .description("Delete a notebook")
+    .option("-n, --notebook <id>", "Notebook ID (uses current if not set). Supports partial IDs.")
     .option("-y, --yes", "Skip confirmation prompt")
     .action(
-      action(async (id, opts, cmd) => {
+      action(async (opts, cmd) => {
         const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
+        const notebookId = await requireNotebookId(client, opts.notebook);
 
         if (!opts.yes) {
           const { createInterface } = await import("readline");
           const rl = createInterface({ input: process.stdin, output: process.stdout });
           const answer = await new Promise<string>((resolve) =>
-            rl.question(`Delete notebook ${id}? (y/N) `, resolve),
+            rl.question(`Delete notebook ${notebookId}? (y/N) `, resolve),
           );
           rl.close();
           if (answer.toLowerCase() !== "y") {
@@ -81,8 +83,15 @@ export function buildNotebookCommands(program: Command): void {
           }
         }
 
-        await client.notebooks.delete(id);
-        console.log(chalk.green(`Notebook deleted: ${id}`));
+        await client.notebooks.delete(notebookId);
+        console.log(chalk.green(`Notebook deleted: ${notebookId}`));
+
+        // Clear context if we just deleted the active notebook
+        const ctx = await client.loadContext();
+        if (ctx.notebookId === notebookId) {
+          await client.clearContext();
+          console.log(chalk.dim("Cleared current notebook context."));
+        }
       }),
     );
 
@@ -110,18 +119,35 @@ export function buildNotebookCommands(program: Command): void {
     .command("summary")
     .description("Get the AI-generated summary of the active notebook")
     .option("-n, --notebook <id>", "Notebook ID")
+    .option("--topics", "Include AI-suggested follow-up topics")
     .option("--json", "Output as JSON")
     .action(
       action(async (opts, cmd) => {
         const globalOpts = cmd.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const summary = await client.notebooks.summary(notebookId);
+        const description = await client.notebooks.getDescription(notebookId);
 
         if (opts.json || globalOpts.json) {
-          console.log(JSON.stringify({ summary }, null, 2));
+          const data: Record<string, unknown> = { summary: description.summary };
+          if (opts.topics) data.suggestedTopics = description.suggestedTopics;
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        if (description.summary) {
+          console.log(chalk.bold("Summary:"));
+          console.log(description.summary);
         } else {
-          console.log(summary);
+          console.log(chalk.dim("No summary available."));
+        }
+
+        if (opts.topics && description.suggestedTopics.length > 0) {
+          console.log();
+          console.log(chalk.bold("Suggested Topics:"));
+          description.suggestedTopics.forEach((t, i) => {
+            console.log(`  ${i + 1}. ${t.question}`);
+          });
         }
       }),
     );

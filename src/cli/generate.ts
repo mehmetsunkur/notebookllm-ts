@@ -1,10 +1,11 @@
 // Generate commands: audio, video, quiz, flashcards, infographic, slide-deck,
 //                   revise-slide, data-table, mind-map, report
 
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveArtifactId } from "./options.ts";
+import { RateLimitError } from "../exceptions.ts";
 import type { GlobalOptions } from "../types.ts";
 
 function addCommonGenerateOptions(cmd: Command): Command {
@@ -25,22 +26,28 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("audio [description]")
       .description("Generate an Audio Overview")
-      .option("--format <fmt>", "Audio format")
-      .option("--length <length>", "Length hint (short|medium|long)"),
+      .addOption(new Option("--format <fmt>", "Audio format").choices(["deep-dive", "brief", "critique", "debate"]).default("deep-dive"))
+      .addOption(new Option("--length <length>", "Audio length").choices(["short", "default", "long"]).default("default")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating audio...").start();
-      const result = await client.generate.generateAudio(notebookId, {
-        description,
-        format: opts.format,
-        length: opts.length,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateAudio(notebookId, {
+          description,
+          format: opts.format,
+          length: opts.length,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Audio generation started."));
@@ -55,22 +62,28 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("video [description]")
       .description("Generate a Video Overview")
-      .option("--format <fmt>", "Video format")
-      .option("--style <style>", "Video style"),
+      .addOption(new Option("--format <fmt>", "Video format").choices(["explainer", "brief"]).default("explainer"))
+      .addOption(new Option("--style <style>", "Video style").choices(["auto", "classic", "whiteboard", "kawaii", "anime", "watercolor", "retro-print", "heritage", "paper-craft"]).default("auto")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating video...").start();
-      const result = await client.generate.generateVideo(notebookId, {
-        description,
-        format: opts.format,
-        style: opts.style,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateVideo(notebookId, {
+          description,
+          format: opts.format,
+          style: opts.style,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Video generation started."));
@@ -84,22 +97,28 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("slide-deck [description]")
       .description("Generate a slide deck")
-      .option("--format <fmt>", "Slide format")
-      .option("--length <length>", "Length hint"),
+      .addOption(new Option("--format <fmt>", "Slide format").choices(["detailed", "presenter"]).default("detailed"))
+      .addOption(new Option("--length <length>", "Slide length").choices(["default", "short"]).default("default")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating slide deck...").start();
-      const result = await client.generate.generateSlideDeck(notebookId, {
-        description,
-        format: opts.format,
-        length: opts.length,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateSlideDeck(notebookId, {
+          description,
+          format: opts.format,
+          length: opts.length,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Slide deck generation started."));
@@ -120,15 +139,22 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const artifactId = await resolveArtifactId(client, notebookId, opts.artifact);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Revising slide...").start();
-      const result = await client.generate.reviseSlide(notebookId, {
-        description,
-        artifactId: opts.artifact,
-        slideNumber: parseInt(opts.slide, 10),
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.reviseSlide(notebookId, {
+          description,
+          artifactId,
+          slideNumber: parseInt(opts.slide, 10),
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Slide revision started."));
@@ -142,22 +168,28 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("quiz [description]")
       .description("Generate a quiz")
-      .option("--difficulty <level>", "Difficulty: easy|medium|hard")
-      .option("--quantity <n>", "Number of questions"),
+      .addOption(new Option("--difficulty <level>", "Difficulty").choices(["easy", "medium", "hard"]).default("medium"))
+      .addOption(new Option("--quantity <qty>", "Question count").choices(["fewer", "standard", "more"]).default("standard")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating quiz...").start();
-      const result = await client.generate.generateQuiz(notebookId, {
-        description,
-        difficulty: opts.difficulty,
-        quantity: opts.quantity ? parseInt(opts.quantity, 10) : undefined,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateQuiz(notebookId, {
+          description,
+          difficulty: opts.difficulty,
+          quantity: opts.quantity,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Quiz generation started."));
@@ -171,22 +203,28 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("flashcards [description]")
       .description("Generate flashcards")
-      .option("--difficulty <level>", "Difficulty: easy|medium|hard")
-      .option("--quantity <n>", "Number of cards"),
+      .addOption(new Option("--difficulty <level>", "Difficulty").choices(["easy", "medium", "hard"]).default("medium"))
+      .addOption(new Option("--quantity <qty>", "Card count").choices(["fewer", "standard", "more"]).default("standard")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating flashcards...").start();
-      const result = await client.generate.generateFlashcards(notebookId, {
-        description,
-        difficulty: opts.difficulty,
-        quantity: opts.quantity ? parseInt(opts.quantity, 10) : undefined,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateFlashcards(notebookId, {
+          description,
+          difficulty: opts.difficulty,
+          quantity: opts.quantity,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Flashcards generation started."));
@@ -200,22 +238,28 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("infographic [description]")
       .description("Generate an infographic")
-      .option("--orientation <o>", "Orientation: portrait|landscape")
-      .option("--detail <d>", "Detail level: low|medium|high"),
+      .addOption(new Option("--orientation <o>", "Orientation").choices(["landscape", "portrait", "square"]).default("landscape"))
+      .addOption(new Option("--detail <d>", "Detail level").choices(["concise", "standard", "detailed"]).default("standard")),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating infographic...").start();
-      const result = await client.generate.generateInfographic(notebookId, {
-        description,
-        orientation: opts.orientation,
-        detail: opts.detail,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateInfographic(notebookId, {
+          description,
+          orientation: opts.orientation,
+          detail: opts.detail,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Infographic generation started."));
@@ -234,13 +278,19 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
       const spinner = ora("Generating data table...").start();
-      const result = await client.generate.generateDataTable(notebookId, {
-        description,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateDataTable(notebookId, {
+          description,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Data table generation started."));
@@ -276,22 +326,47 @@ export function buildGenerateCommands(program: Command): void {
     genCmd
       .command("report [description]")
       .description("Generate a report")
-      .option("--format <fmt>", "Report format")
-      .option("--append", "Append to existing report"),
+      .addOption(new Option("--format <fmt>", "Report format").choices(["briefing-doc", "study-guide", "blog-post", "custom"]).default("briefing-doc"))
+      .option("--append <text>", "Append extra instructions to the built-in prompt (ignored with --format custom)"),
   ).action(
     action(async (description, opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const isJson = opts.json || globalOpts.json;
+
+      // Smart detection: a free-text description with the default briefing-doc format
+      // means the user wants a custom report. With any other explicit format, the
+      // description is passed as a custom prompt on top of the format's built-in prompt.
+      let format: string = opts.format;
+      let customPrompt: string | undefined;
+      if (description) {
+        if (opts.format === "briefing-doc") {
+          format = "custom";
+        }
+        customPrompt = description;
+      }
+
+      let append: string | undefined = opts.append;
+      if (append && format === "custom") {
+        process.stderr.write("Warning: --append has no effect with --format custom. Use the description argument instead.\n");
+        append = undefined;
+      }
+
       const spinner = ora("Generating report...").start();
-      const result = await client.generate.generateReport(notebookId, {
-        description,
-        format: opts.format,
-        append: opts.append,
-        sourceIds: opts.source,
-        language: opts.language,
-        wait: opts.wait,
-      });
+      const result = await generateWithRetry(
+        () => client.generate.generateReport(notebookId, {
+          description: customPrompt,
+          format,
+          append,
+          sourceIds: opts.source,
+          language: opts.language,
+          wait: opts.wait,
+        }),
+        parseInt(opts.retry ?? "0", 10),
+        isJson,
+        spinner,
+      );
       spinner.succeed("Done.");
       printOrJson(result, opts.json || globalOpts.json, (r) => {
         console.log(chalk.green("Report generation started."));
@@ -301,4 +376,48 @@ export function buildGenerateCommands(program: Command): void {
   );
 
   program.addCommand(genCmd);
+}
+
+// --- Retry helper ---
+
+const RETRY_INITIAL_MS = 60_000;
+const RETRY_MAX_MS = 300_000;
+
+async function generateWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number,
+  jsonMode: boolean,
+  spinner: { text: string; fail: (msg?: string) => void },
+): Promise<T> {
+  let delay = RETRY_INITIAL_MS;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err instanceof RateLimitError && attempt < maxRetries) {
+        const waitSec = Math.round(delay / 1000);
+        spinner.text = chalk.yellow(
+          `Rate limited. Retrying in ${waitSec}s (attempt ${attempt + 1}/${maxRetries})...`,
+        );
+        await sleep(delay);
+        delay = Math.min(delay * 2, RETRY_MAX_MS);
+      } else if (err instanceof RateLimitError) {
+        spinner.fail("Rate limited.");
+        if (jsonMode) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.log(JSON.stringify({ error: true, code: "RATE_LIMITED", message: msg }));
+          process.exit(1);
+        }
+        throw err;
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw new Error("Unreachable");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

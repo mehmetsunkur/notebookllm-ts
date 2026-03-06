@@ -181,13 +181,13 @@ export interface SlideDeckOptions extends GenerateOptions {
 export interface QuizOptions extends GenerateOptions {
   description?: string;
   difficulty?: string;
-  quantity?: number;
+  quantity?: string;
 }
 
 export interface FlashcardsOptions extends GenerateOptions {
   description?: string;
   difficulty?: string;
-  quantity?: number;
+  quantity?: string;
 }
 
 export interface InfographicOptions extends GenerateOptions {
@@ -203,7 +203,7 @@ export interface DataTableOptions extends GenerateOptions {
 export interface ReportOptions extends GenerateOptions {
   description?: string;
   format?: string;
-  append?: boolean;
+  append?: string;
 }
 
 export interface ReviseSlideOptions extends GenerateOptions {
@@ -665,7 +665,7 @@ function mapAudioLength(length?: string): number | null {
   const l = length?.toLowerCase();
   if (l === "short") return 1;
   if (l === "long") return 3;
-  if (l === "medium" || l === "default") return 2;
+  if (l === "default") return 2;
   return null;
 }
 
@@ -681,13 +681,21 @@ function mapVideoStyle(style?: string): number | null {
   if (s === "auto" || s === "auto_select") return 1;
   if (s === "classic") return 3;
   if (s === "whiteboard") return 4;
+  if (s === "kawaii") return 5;
+  if (s === "anime") return 6;
+  if (s === "watercolor") return 7;
+  if (s === "retro-print" || s === "retro_print") return 8;
+  if (s === "heritage") return 9;
+  if (s === "paper-craft" || s === "paper_craft") return 10;
   return null;
 }
 
-function mapQuizQuantity(quantity?: number): number | null {
-  if (quantity == null) return null;
-  if (quantity <= 5) return 1;
-  return 2;
+function mapQuizQuantity(quantity?: string): number | null {
+  const q = quantity?.toLowerCase();
+  if (q === "fewer") return 1;
+  if (q === "standard") return 2;
+  if (q === "more") return 3;
+  return null;
 }
 
 function mapQuizDifficulty(difficulty?: string): number | null {
@@ -708,9 +716,9 @@ function mapInfographicOrientation(orientation?: string): number | null {
 
 function mapInfographicDetail(detail?: string): number | null {
   const d = detail?.toLowerCase();
-  if (d === "low" || d === "concise") return 1;
-  if (d === "medium" || d === "standard") return 2;
-  if (d === "high" || d === "detailed") return 3;
+  if (d === "concise") return 1;
+  if (d === "standard") return 2;
+  if (d === "detailed") return 3;
   return null;
 }
 

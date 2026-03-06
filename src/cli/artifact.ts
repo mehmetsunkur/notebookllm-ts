@@ -4,7 +4,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveArtifactId } from "./options.ts";
 import type { GlobalOptions, ArtifactType } from "../types.ts";
 
 export function buildArtifactCommands(program: Command): void {
@@ -59,7 +59,8 @@ export function buildArtifactCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const artifact = await client.artifacts.get(notebookId, artifactId);
+        const resolvedId = await resolveArtifactId(client, notebookId, artifactId);
+        const artifact = await client.artifacts.get(notebookId, resolvedId);
         printOrJson(artifact, opts.json || globalOpts.json, (a) => {
           console.log(`ID:      ${a.id}`);
           console.log(`Type:    ${a.type}`);
@@ -82,7 +83,8 @@ export function buildArtifactCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const artifact = await client.artifacts.rename(notebookId, artifactId, title);
+        const resolvedId = await resolveArtifactId(client, notebookId, artifactId);
+        const artifact = await client.artifacts.rename(notebookId, resolvedId, title);
         printOrJson(artifact, opts.json || globalOpts.json, (a) => {
           console.log(chalk.green(`Renamed to: ${a.title}`));
         });
@@ -100,12 +102,13 @@ export function buildArtifactCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveArtifactId(client, notebookId, artifactId);
 
         if (!opts.yes) {
           const { createInterface } = await import("readline");
           const rl = createInterface({ input: process.stdin, output: process.stdout });
           const answer = await new Promise<string>((resolve) =>
-            rl.question(`Delete artifact ${artifactId}? (y/N) `, resolve),
+            rl.question(`Delete artifact ${resolvedId}? (y/N) `, resolve),
           );
           rl.close();
           if (answer.toLowerCase() !== "y") {
@@ -114,8 +117,8 @@ export function buildArtifactCommands(program: Command): void {
           }
         }
 
-        await client.artifacts.delete(notebookId, artifactId);
-        console.log(chalk.green(`Artifact deleted: ${artifactId}`));
+        await client.artifacts.delete(notebookId, resolvedId);
+        console.log(chalk.green(`Artifact deleted: ${resolvedId}`));
       }),
     );
 
@@ -132,9 +135,10 @@ export function buildArtifactCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveArtifactId(client, notebookId, artifactId);
         const result = await client.artifacts.export(
           notebookId,
-          artifactId,
+          resolvedId,
           opts.type,
           opts.title,
         );
@@ -178,9 +182,10 @@ export function buildArtifactCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveArtifactId(client, notebookId, artifactId);
 
         const spinner = ora("Waiting for artifact...").start();
-        const artifact = await client.artifacts.wait(notebookId, artifactId, {
+        const artifact = await client.artifacts.wait(notebookId, resolvedId, {
           timeoutMs: parseInt(opts.timeout, 10) * 1000,
           intervalMs: parseInt(opts.interval, 10) * 1000,
         });

@@ -33,6 +33,16 @@ export interface Notebook {
   shareSettings?: ShareSettings;
 }
 
+export interface SuggestedTopic {
+  question: string;
+  prompt: string;
+}
+
+export interface NotebookDescription {
+  summary: string;
+  suggestedTopics: SuggestedTopic[];
+}
+
 export interface Source {
   id: string;
   title: string;

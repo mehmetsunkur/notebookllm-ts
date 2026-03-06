@@ -46,13 +46,14 @@ describe("Artifacts API RPC contract", () => {
 
   it("generateAudio uses CREATE_ARTIFACT", async () => {
     const api = new TestArtifactsAPI();
-    api.setResponses(["task-1"]);
+    api.setResponses([], [["11111111-1111-1111-1111-111111111111"]]);
 
     await api.generateAudio("nb-1", { sourceIds: ["src-1"], language: "en" });
 
-    expect(api.calls[0].method).toBe(RPCMethod.CREATE_ARTIFACT);
-    expect(api.calls[0].options).toEqual({ sourcePath: "/notebook/nb-1", allowNull: true });
-    expect(api.calls[0].payload).toEqual([
+    expect(api.calls[0].method).toBe(RPCMethod.LIST_ARTIFACTS);
+    expect(api.calls[1].method).toBe(RPCMethod.CREATE_ARTIFACT);
+    expect(api.calls[1].options).toEqual({ sourcePath: "/notebook/nb-1", allowNull: true });
+    expect(api.calls[1].payload).toEqual([
       [2],
       "nb-1",
       [

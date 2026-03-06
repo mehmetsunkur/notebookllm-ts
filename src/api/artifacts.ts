@@ -214,16 +214,22 @@ export interface ReviseSlideOptions extends GenerateOptions {
 
 export class GenerateAPI extends ArtifactsAPI {
   private async createArtifact(notebookId: string, artifactPayload: unknown[], wait?: boolean): Promise<Artifact | ArtifactTask> {
+    const before = await this.list(notebookId);
     const raw = await this.rpc(
       RPCMethod.CREATE_ARTIFACT,
       [[2], notebookId, artifactPayload],
       { sourcePath: `/notebook/${notebookId}`, allowNull: true },
     );
-    const task = parseArtifactTask(raw);
-
-    if (wait && task.taskId) {
-      return this.pollTask(task.taskId);
+    if (this.verbose) {
+      console.error(`[ARTIFACT] create raw: ${safeJson(raw)}`);
     }
+    const task = parseArtifactTask(raw);
+    const effectiveTaskId = task.taskId || (await this.inferNewArtifactId(notebookId, before));
+
+    if (wait && effectiveTaskId) {
+      return this.wait(notebookId, effectiveTaskId);
+    }
+    if (effectiveTaskId) return { ...task, taskId: effectiveTaskId };
     return task;
   }
 
@@ -312,15 +318,18 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async reviseSlide(notebookId: string, options: ReviseSlideOptions): Promise<Artifact | ArtifactTask> {
+    const before = await this.list(notebookId);
     const raw = await this.rpc(
       RPCMethod.REVISE_SLIDE,
       [[2], options.artifactId, [[[options.slideNumber, options.description]]]],
       { sourcePath: `/notebook/${notebookId}`, allowNull: true },
     );
     const task = parseArtifactTask(raw);
-    if (options.wait && task.taskId) {
-      return this.pollTask(task.taskId);
+    const effectiveTaskId = task.taskId || (await this.inferNewArtifactId(notebookId, before));
+    if (options.wait && effectiveTaskId) {
+      return this.wait(notebookId, effectiveTaskId);
     }
+    if (effectiveTaskId) return { ...task, taskId: effectiveTaskId };
     return task;
   }
 
@@ -461,9 +470,6 @@ export class GenerateAPI extends ArtifactsAPI {
     );
 
     const task = parseArtifactTask(raw);
-    if (options.wait && task.taskId) {
-      return this.pollTask(task.taskId);
-    }
     return task;
   }
 
@@ -499,6 +505,21 @@ export class GenerateAPI extends ArtifactsAPI {
 
     return this.createArtifact(notebookId, payload, options.wait);
   }
+
+  private async inferNewArtifactId(notebookId: string, before: Artifact[]): Promise<string | undefined> {
+    const beforeIds = new Set(before.map((a) => a.id));
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const after = await this.list(notebookId);
+      const created = after.find((a) => !beforeIds.has(a.id));
+      if (created?.id) return created.id;
+      if (attempt < 5) {
+        await sleep(2000);
+      }
+    }
+    const latest = await this.list(notebookId);
+    if (latest[0]?.id) return latest[0].id;
+    return undefined;
+  }
 }
 
 function parseArtifact(raw: unknown): Artifact {
@@ -529,11 +550,25 @@ function parseArtifactList(raw: unknown): Artifact[] {
 }
 
 function parseArtifactTask(raw: unknown): ArtifactTask {
-  const taskId = extractFirstString(raw) ?? "";
+  let taskId = "";
+  let status: ArtifactTask["status"] = "failed";
+
+  if (Array.isArray(raw) && Array.isArray(raw[0])) {
+    const artifactData = raw[0] as unknown[];
+    if (typeof artifactData[0] === "string" && isUuid(artifactData[0])) {
+      taskId = artifactData[0];
+      status = mapArtifactStatus(artifactData[4]);
+    }
+  }
+  if (!taskId) {
+    taskId = extractFirstUuid(raw) ?? "";
+    status = taskId ? "generating" : "failed";
+  }
+
   return {
     taskId,
     artifactId: undefined,
-    status: taskId ? "generating" : "unknown",
+    status,
   };
 }
 
@@ -546,6 +581,32 @@ function extractFirstString(value: unknown): string | undefined {
     }
   }
   return undefined;
+}
+
+function extractFirstUuid(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const match = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    return match ? match[0] : undefined;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = extractFirstUuid(item);
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function safeJson(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
 }
 
 function extractDownloadUrl(data: unknown[]): string | undefined {

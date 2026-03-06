@@ -285,16 +285,29 @@ export function buildGenerateCommands(program: Command): void {
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
 
-      if (opts.append && opts.format === "custom") {
+      // Smart detection: a free-text description with the default briefing-doc format
+      // means the user wants a custom report. With any other explicit format, the
+      // description is passed as a custom prompt on top of the format's built-in prompt.
+      let format: string = opts.format;
+      let customPrompt: string | undefined;
+      if (description) {
+        if (opts.format === "briefing-doc") {
+          format = "custom";
+        }
+        customPrompt = description;
+      }
+
+      let append: string | undefined = opts.append;
+      if (append && format === "custom") {
         process.stderr.write("Warning: --append has no effect with --format custom. Use the description argument instead.\n");
-        opts.append = undefined;
+        append = undefined;
       }
 
       const spinner = ora("Generating report...").start();
       const result = await client.generate.generateReport(notebookId, {
-        description,
-        format: opts.format,
-        append: opts.append,
+        description: customPrompt,
+        format,
+        append,
         sourceIds: opts.source,
         language: opts.language,
         wait: opts.wait,

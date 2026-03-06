@@ -1,6 +1,6 @@
 // Source commands: list, add, get, delete, rename, refresh, fulltext, guide, wait
 
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
@@ -180,12 +180,12 @@ export function buildSourceCommands(program: Command): void {
   // source add-research <query>
   sourceCmd
     .command("add-research <query>")
-    .description("Add research sources based on a query")
+    .description("Search web or drive and add sources from results")
     .option("-n, --notebook <id>", "Notebook ID")
-    .option("--mode <mode>", "Research mode", "standard")
-    .option("--from <date>", "Start date for research")
+    .addOption(new Option("--from <backend>", "Search backend").choices(["web", "drive"]).default("web"))
+    .addOption(new Option("--mode <mode>", "Search mode").choices(["fast", "deep"]).default("fast"))
     .option("--import-all", "Import all research results")
-    .option("--no-wait", "Do not wait")
+    .option("--no-wait", "Start research and return immediately")
     .option("--json", "Output as JSON")
     .action(
       action(async (query, opts, cmd) => {
@@ -194,7 +194,7 @@ export function buildSourceCommands(program: Command): void {
         const notebookId = await requireNotebookId(client, opts.notebook);
         const source = await client.sources.addResearch(notebookId, query, {
           mode: opts.mode,
-          from: opts.from,
+          source: opts.from,
           importAll: opts.importAll,
         });
         printOrJson(source, opts.json || globalOpts.json, (s) => {

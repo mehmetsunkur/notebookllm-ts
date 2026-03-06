@@ -119,14 +119,15 @@ export class SourcesAPI extends ClientCore {
   async addResearch(
     notebookId: string,
     query: string,
-    options: { mode?: string; from?: string; importAll?: boolean } = {},
+    options: { mode?: "fast" | "deep"; source?: "web" | "drive"; importAll?: boolean } = {},
   ): Promise<Source> {
-    const mode = (options.mode ?? "fast").toLowerCase();
+    const mode = options.mode ?? "fast";
+    const sourceType = options.source === "drive" ? 2 : 1;
     const rpcMethod = mode === "deep" ? RPCMethod.START_DEEP_RESEARCH : RPCMethod.START_FAST_RESEARCH;
     const startPayload =
       mode === "deep"
-        ? [null, [1], [query, 1], 5, notebookId]
-        : [[query, 1], null, 1, notebookId];
+        ? [null, [1], [query, sourceType], 5, notebookId]
+        : [[query, sourceType], null, 1, notebookId];
     await this.rpc(rpcMethod, startPayload, {
       sourcePath: `/notebook/${notebookId}`,
     });

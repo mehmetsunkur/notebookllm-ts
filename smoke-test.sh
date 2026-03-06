@@ -9,6 +9,7 @@ CLI=(bun run src/cli/index.ts --verbose)
 ENV_FILE="${ENV_FILE:-.env}"
 RUN_PUBLIC_TEST="${RUN_PUBLIC_TEST:-false}"
 KEEP_ARTIFACTS="${KEEP_ARTIFACTS:-false}"
+ARTIFACT_TIMEOUT="${ARTIFACT_TIMEOUT:-900}"   # seconds to wait for any artifact to be ready
 
 print_header() {
   printf '\n== %s ==\n' "$1"
@@ -57,6 +58,21 @@ on_error() {
 }
 trap on_error ERR
 
+# Print task IDs returned by fire-and-forget generate commands.
+print_task_ids() {
+  local label="$1"
+  shift
+  printf '\nStarted %s:\n' "$label"
+  for json in "$@"; do
+    bun -e '
+const r = JSON.parse(process.argv[1]);
+const id = r.taskId || r.id || "(no id)";
+const st = r.status || "?";
+console.log("  " + id + "  [" + st + "]");
+' "$json" 2>/dev/null || true
+  done
+}
+
 pick_artifact_id() {
   local before_json="$1"
   local after_json="$2"
@@ -83,6 +99,57 @@ process.exit(1);
 ' "$before_json" "$after_json"
 }
 
+# Poll artifact list with exponential backoff until at least one newly created
+# artifact is ready (mirrors Python's wait_for_completion approach).
+wait_for_ready_artifact() {
+  local before_json="$1"
+  local notebook_id="$2"
+  local timeout_secs="${ARTIFACT_TIMEOUT}"
+  local interval=5
+  local max_interval=30
+  local deadline=$(( $(date +%s) + timeout_secs ))
+  local attempt=0
+
+  printf '\nWaiting for artifacts to be ready (timeout: %ds, backoff: %d..%ds)...\n' \
+    "$timeout_secs" "$interval" "$max_interval"
+
+  while true; do
+    local now
+    now=$(date +%s)
+    if (( now >= deadline )); then
+      echo "Timeout: no artifact became ready within ${timeout_secs}s." >&2
+      return 1
+    fi
+
+    local after_json
+    after_json="$("${CLI[@]}" artifact list -n "$notebook_id" --json 2>/dev/null)"
+
+    if pick_artifact_id "$before_json" "$after_json" > /dev/null 2>&1; then
+      printf 'Ready artifact found after %ds.\n' "$(( $(date +%s) - deadline + timeout_secs ))"
+      echo "$after_json"
+      return 0
+    fi
+
+    # Show counts while waiting
+    bun -e '
+const before = JSON.parse(process.argv[1]);
+const after  = JSON.parse(process.argv[2]);
+const beforeIds = new Set(before.map((a) => a.id));
+const newOnes = after.filter((a) => !beforeIds.has(a.id));
+const byStatus = {};
+for (const a of newOnes) byStatus[a.status] = (byStatus[a.status] || 0) + 1;
+const parts = Object.entries(byStatus).map(([s,n]) => n + " " + s);
+console.log("  " + (parts.length ? parts.join(", ") : "none yet"));
+' "$before_json" "$after_json" 2>/dev/null || true
+
+    attempt=$(( attempt + 1 ))
+    # Exponential backoff: double interval up to max_interval
+    interval=$(( interval * 2 > max_interval ? max_interval : interval * 2 ))
+    printf 'Sleeping %ds before next poll...\n' "$interval"
+    sleep "$interval"
+  done
+}
+
 main() {
   require_cmd bun
   load_env
@@ -93,6 +160,7 @@ main() {
   echo "TEST_EMAIL=$TEST_EMAIL"
   echo "RUN_PUBLIC_TEST=$RUN_PUBLIC_TEST"
   echo "KEEP_ARTIFACTS=$KEEP_ARTIFACTS"
+  echo "ARTIFACT_TIMEOUT=${ARTIFACT_TIMEOUT}s"
 
   print_header "Preflight"
   run_cmd bun run typecheck
@@ -101,20 +169,25 @@ main() {
   run_cmd "${CLI[@]}" summary -n "$NOTEBOOK_ID" --json
   run_cmd "${CLI[@]}" share status -n "$NOTEBOOK_ID" --json
 
-  print_header "Phase A: Artifact Deep Smoke"
+  print_header "Phase A: Fire-and-forget generation (Python style)"
   before_artifacts="$("${CLI[@]}" artifact list -n "$NOTEBOOK_ID" --json)"
 
-  run_cmd "${CLI[@]}" generate audio -n "$NOTEBOOK_ID" --wait --json
-  run_cmd "${CLI[@]}" generate video -n "$NOTEBOOK_ID" --wait --json
-  run_cmd "${CLI[@]}" generate report -n "$NOTEBOOK_ID" --wait --json
-  run_cmd "${CLI[@]}" generate quiz -n "$NOTEBOOK_ID" --wait --json
-  run_cmd "${CLI[@]}" generate flashcards -n "$NOTEBOOK_ID" --wait --json
-  run_cmd "${CLI[@]}" generate infographic -n "$NOTEBOOK_ID" --wait --json
-  run_cmd "${CLI[@]}" generate slide-deck -n "$NOTEBOOK_ID" --wait --json
-  run_cmd "${CLI[@]}" generate data-table -n "$NOTEBOOK_ID" "Test table" --wait --json
-  run_cmd "${CLI[@]}" generate mind-map -n "$NOTEBOOK_ID" --wait --json
+  r_audio="$("${CLI[@]}"    generate audio      -n "$NOTEBOOK_ID" --json)"
+  r_video="$("${CLI[@]}"    generate video      -n "$NOTEBOOK_ID" --json)"
+  r_report="$("${CLI[@]}"   generate report     -n "$NOTEBOOK_ID" --json)"
+  r_quiz="$("${CLI[@]}"     generate quiz       -n "$NOTEBOOK_ID" --json)"
+  r_flash="$("${CLI[@]}"    generate flashcards -n "$NOTEBOOK_ID" --json)"
+  r_info="$("${CLI[@]}"     generate infographic -n "$NOTEBOOK_ID" --json)"
+  r_slide="$("${CLI[@]}"    generate slide-deck -n "$NOTEBOOK_ID" --json)"
+  r_table="$("${CLI[@]}"    generate data-table  -n "$NOTEBOOK_ID" "Test table" --json)"
+  r_mmap="$("${CLI[@]}"     generate mind-map   -n "$NOTEBOOK_ID" --json)"
 
-  after_artifacts="$("${CLI[@]}" artifact list -n "$NOTEBOOK_ID" --json)"
+  print_task_ids "all generates" \
+    "$r_audio" "$r_video" "$r_report" "$r_quiz" "$r_flash" \
+    "$r_info" "$r_slide" "$r_table" "$r_mmap"
+
+  # Wait for at least one artifact to be ready before artifact operations
+  after_artifacts="$(wait_for_ready_artifact "$before_artifacts" "$NOTEBOOK_ID")"
   echo "$after_artifacts"
 
   artifact_id="$(pick_artifact_id "$before_artifacts" "$after_artifacts")"

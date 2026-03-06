@@ -4,7 +4,7 @@
 import { Command, Option } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveArtifactId } from "./options.ts";
 import type { GlobalOptions } from "../types.ts";
 
 function addCommonGenerateOptions(cmd: Command): Command {
@@ -120,10 +120,11 @@ export function buildGenerateCommands(program: Command): void {
       const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
       const client = makeClient(globalOpts);
       const notebookId = await requireNotebookId(client, opts.notebook);
+      const artifactId = await resolveArtifactId(client, notebookId, opts.artifact);
       const spinner = ora("Revising slide...").start();
       const result = await client.generate.reviseSlide(notebookId, {
         description,
-        artifactId: opts.artifact,
+        artifactId,
         slideNumber: parseInt(opts.slide, 10),
         sourceIds: opts.source,
         language: opts.language,

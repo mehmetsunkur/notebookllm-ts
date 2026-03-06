@@ -3,7 +3,7 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveNoteId } from "./options.ts";
 import type { GlobalOptions } from "../types.ts";
 
 export function buildNoteCommands(program: Command): void {
@@ -79,7 +79,8 @@ export function buildNoteCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const note = await client.notes.get(notebookId, noteId);
+        const resolvedId = await resolveNoteId(client, notebookId, noteId);
+        const note = await client.notes.get(notebookId, resolvedId);
         printOrJson(note, opts.json || globalOpts.json, (n) => {
           console.log(chalk.bold(n.title));
           console.log(n.content);
@@ -98,7 +99,8 @@ export function buildNoteCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const note = await client.notes.rename(notebookId, noteId, title);
+        const resolvedId = await resolveNoteId(client, notebookId, noteId);
+        const note = await client.notes.rename(notebookId, resolvedId, title);
         printOrJson(note, opts.json || globalOpts.json, (n) => {
           console.log(chalk.green(`Renamed to: ${n.title}`));
         });
@@ -116,12 +118,13 @@ export function buildNoteCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveNoteId(client, notebookId, noteId);
 
         if (!opts.yes) {
           const { createInterface } = await import("readline");
           const rl = createInterface({ input: process.stdin, output: process.stdout });
           const answer = await new Promise<string>((resolve) =>
-            rl.question(`Delete note ${noteId}? (y/N) `, resolve),
+            rl.question(`Delete note ${resolvedId}? (y/N) `, resolve),
           );
           rl.close();
           if (answer.toLowerCase() !== "y") {
@@ -130,8 +133,8 @@ export function buildNoteCommands(program: Command): void {
           }
         }
 
-        await client.notes.delete(notebookId, noteId);
-        console.log(chalk.green(`Note deleted: ${noteId}`));
+        await client.notes.delete(notebookId, resolvedId);
+        console.log(chalk.green(`Note deleted: ${resolvedId}`));
       }),
     );
 
@@ -146,7 +149,8 @@ export function buildNoteCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const note = await client.notes.save(notebookId, noteId, content);
+        const resolvedId = await resolveNoteId(client, notebookId, noteId);
+        const note = await client.notes.save(notebookId, resolvedId, content);
         printOrJson(note, opts.json || globalOpts.json, (n) => {
           console.log(chalk.green(`Note saved: ${n.id}`));
         });
@@ -166,13 +170,14 @@ export function buildNoteCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const current = await client.notes.get(notebookId, noteId);
+        const resolvedId = await resolveNoteId(client, notebookId, noteId);
+        const current = await client.notes.get(notebookId, resolvedId);
         const updated = await client.notes.save(
           notebookId,
-          noteId,
+          resolvedId,
           opts.content ?? current.content,
         );
-        const final = opts.title ? await client.notes.rename(notebookId, noteId, opts.title) : updated;
+        const final = opts.title ? await client.notes.rename(notebookId, resolvedId, opts.title) : updated;
         printOrJson(final, opts.json || globalOpts.json, (n) => {
           console.log(chalk.green(`Note updated: ${n.id}`));
         });

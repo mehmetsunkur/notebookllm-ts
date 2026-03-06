@@ -4,7 +4,7 @@ import { Command, Option } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveSourceId } from "./options.ts";
 import type { GlobalOptions } from "../types.ts";
 
 export function buildSourceCommands(program: Command): void {
@@ -214,7 +214,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const source = await client.sources.get(notebookId, sourceId);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const source = await client.sources.get(notebookId, resolvedId);
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(`ID:     ${s.id}`);
           console.log(`Title:  ${s.title}`);
@@ -236,7 +237,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const result = await client.sources.fulltext(notebookId, sourceId);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const result = await client.sources.fulltext(notebookId, resolvedId);
         if (opts.json || globalOpts.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
@@ -256,7 +258,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const guide = await client.sources.guide(notebookId, sourceId);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const guide = await client.sources.guide(notebookId, resolvedId);
         if (opts.json || globalOpts.json) {
           console.log(JSON.stringify({ guide }, null, 2));
         } else {
@@ -276,7 +279,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const source = await client.sources.rename(notebookId, sourceId, title);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const source = await client.sources.rename(notebookId, resolvedId, title);
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(chalk.green(`Renamed to: ${s.title}`));
         });
@@ -294,7 +298,8 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
-        const source = await client.sources.refresh(notebookId, sourceId);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
+        const source = await client.sources.refresh(notebookId, resolvedId);
         printOrJson(source, opts.json || globalOpts.json, (s) => {
           console.log(chalk.green(`Source refreshed: ${s.id}`));
         });
@@ -312,12 +317,13 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
 
         if (!opts.yes) {
           const { createInterface } = await import("readline");
           const rl = createInterface({ input: process.stdin, output: process.stdout });
           const answer = await new Promise<string>((resolve) =>
-            rl.question(`Delete source ${sourceId}? (y/N) `, resolve),
+            rl.question(`Delete source ${resolvedId}? (y/N) `, resolve),
           );
           rl.close();
           if (answer.toLowerCase() !== "y") {
@@ -326,8 +332,8 @@ export function buildSourceCommands(program: Command): void {
           }
         }
 
-        await client.sources.delete(notebookId, sourceId);
-        console.log(chalk.green(`Source deleted: ${sourceId}`));
+        await client.sources.delete(notebookId, resolvedId);
+        console.log(chalk.green(`Source deleted: ${resolvedId}`));
       }),
     );
 
@@ -343,8 +349,9 @@ export function buildSourceCommands(program: Command): void {
         const globalOpts = cmd.parent?.parent?.opts() as GlobalOptions ?? {};
         const client = makeClient(globalOpts);
         const notebookId = await requireNotebookId(client, opts.notebook);
+        const resolvedId = await resolveSourceId(client, notebookId, sourceId);
         const spinner = ora("Waiting for source to process...").start();
-        const source = await client.sources.wait(notebookId, sourceId, {
+        const source = await client.sources.wait(notebookId, resolvedId, {
           timeoutMs: parseInt(opts.timeout, 10) * 1000,
         });
         spinner.succeed("Source ready.");

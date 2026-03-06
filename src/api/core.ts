@@ -8,6 +8,7 @@ import { fetchTokens } from "../auth/tokens.ts";
 import type { AuthTokens } from "../types.ts";
 import { NetworkError, AuthError } from "../exceptions.ts";
 import { rpcErrorFromStatus } from "../rpc/errors.ts";
+import { RPCMethod } from "../rpc/methods.ts";
 
 export interface CoreOptions {
   /** Path to storage_state.json (overrides default) */
@@ -177,6 +178,32 @@ export class ClientCore {
 
     const buf = await response.arrayBuffer();
     return new Uint8Array(buf);
+  }
+
+  /**
+   * Fetch all source IDs from a notebook.
+   * Mirrors Python's get_source_ids() — used to populate source arrays
+   * in artifact generation requests when no sources are explicitly specified.
+   */
+  protected async getSourceIds(notebookId: string): Promise<string[]> {
+    const raw = await this.rpc(
+      RPCMethod.GET_NOTEBOOK,
+      [notebookId, null, [2], null, 0],
+      { sourcePath: `/notebook/${notebookId}` },
+    );
+    const sourceIds: string[] = [];
+    if (!Array.isArray(raw)) return sourceIds;
+    const outer = raw as unknown[];
+    const notebookInfo = Array.isArray(outer[0]) ? (outer[0] as unknown[]) : outer;
+    if (!Array.isArray(notebookInfo[1])) return sourceIds;
+    const sources = notebookInfo[1] as unknown[];
+    for (const source of sources) {
+      if (Array.isArray(source) && Array.isArray(source[0])) {
+        const sid = (source[0] as unknown[])[0];
+        if (typeof sid === "string") sourceIds.push(sid);
+      }
+    }
+    return sourceIds;
   }
 
   /** Force re-auth on next RPC call (e.g. after token expiry). */

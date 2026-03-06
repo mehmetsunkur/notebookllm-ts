@@ -234,8 +234,11 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateAudio(notebookId: string, options: AudioOptions = {}): Promise<Artifact | ArtifactTask> {
-    const sourceTriple = (options.sourceIds ?? []).map((sid) => [[sid]]);
-    const sourceDouble = (options.sourceIds ?? []).map((sid) => [sid]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceTriple = resolvedSourceIds.map((sid) => [[sid]]);
+    const sourceDouble = resolvedSourceIds.map((sid) => [sid]);
 
     const payload = [
       null,
@@ -262,8 +265,11 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateVideo(notebookId: string, options: VideoOptions = {}): Promise<Artifact | ArtifactTask> {
-    const sourceTriple = (options.sourceIds ?? []).map((sid) => [[sid]]);
-    const sourceDouble = (options.sourceIds ?? []).map((sid) => [sid]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceTriple = resolvedSourceIds.map((sid) => [[sid]]);
+    const sourceDouble = resolvedSourceIds.map((sid) => [sid]);
 
     const payload = [
       null,
@@ -292,7 +298,10 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateSlideDeck(notebookId: string, options: SlideDeckOptions = {}): Promise<Artifact | ArtifactTask> {
-    const sourceTriple = (options.sourceIds ?? []).map((sid) => [[sid]]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceTriple = resolvedSourceIds.map((sid) => [[sid]]);
 
     const payload = [
       null,
@@ -334,7 +343,10 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateQuiz(notebookId: string, options: QuizOptions = {}): Promise<Artifact | ArtifactTask> {
-    const sourceTriple = (options.sourceIds ?? []).map((sid) => [[sid]]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceTriple = resolvedSourceIds.map((sid) => [[sid]]);
 
     const payload = [
       null,
@@ -365,7 +377,10 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateFlashcards(notebookId: string, options: FlashcardsOptions = {}): Promise<Artifact | ArtifactTask> {
-    const sourceTriple = (options.sourceIds ?? []).map((sid) => [[sid]]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceTriple = resolvedSourceIds.map((sid) => [[sid]]);
 
     const payload = [
       null,
@@ -395,7 +410,10 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateInfographic(notebookId: string, options: InfographicOptions = {}): Promise<Artifact | ArtifactTask> {
-    const sourceTriple = (options.sourceIds ?? []).map((sid) => [[sid]]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceTriple = resolvedSourceIds.map((sid) => [[sid]]);
 
     const payload = [
       null,
@@ -425,7 +443,10 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateDataTable(notebookId: string, options: DataTableOptions): Promise<Artifact | ArtifactTask> {
-    const sourceTriple = (options.sourceIds ?? []).map((sid) => [[sid]]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceTriple = resolvedSourceIds.map((sid) => [[sid]]);
 
     const payload = [
       null,
@@ -453,7 +474,10 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateMindMap(notebookId: string, options: GenerateOptions = {}): Promise<Artifact | ArtifactTask> {
-    const sourceNested = (options.sourceIds ?? []).map((sid) => [[sid]]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceNested = resolvedSourceIds.map((sid) => [[sid]]);
     const raw = await this.rpc(
       RPCMethod.GENERATE_MIND_MAP,
       [
@@ -474,8 +498,11 @@ export class GenerateAPI extends ArtifactsAPI {
   }
 
   async generateReport(notebookId: string, options: ReportOptions = {}): Promise<Artifact | ArtifactTask> {
-    const sourceTriple = (options.sourceIds ?? []).map((sid) => [[sid]]);
-    const sourceDouble = (options.sourceIds ?? []).map((sid) => [sid]);
+    const resolvedSourceIds = (options.sourceIds?.length ?? 0) > 0
+      ? options.sourceIds!
+      : await this.getSourceIds(notebookId);
+    const sourceTriple = resolvedSourceIds.map((sid) => [[sid]]);
+    const sourceDouble = resolvedSourceIds.map((sid) => [sid]);
 
     const reportTitle = mapReportTitle(options.format);
     const reportDescription = mapReportDescription(options.format);
@@ -570,17 +597,6 @@ function parseArtifactTask(raw: unknown): ArtifactTask {
     artifactId: undefined,
     status,
   };
-}
-
-function extractFirstString(value: unknown): string | undefined {
-  if (typeof value === "string" && value.length > 0) return value;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const nested = extractFirstString(item);
-      if (nested) return nested;
-    }
-  }
-  return undefined;
 }
 
 function extractFirstUuid(value: unknown): string | undefined {

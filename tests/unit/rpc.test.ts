@@ -47,6 +47,11 @@ describe("RPC Encoder", () => {
     expect(url).toContain("hl=en");
   });
 
+  it("supports overriding source-path", () => {
+    const { url } = encodeRequest({ ...baseParams, sourcePath: "/notebook/abc123" });
+    expect(url).toContain("source-path=%2Fnotebook%2Fabc123");
+  });
+
   it("encodeMultiRequest handles multiple calls", () => {
     const { url, body } = encodeMultiRequest(
       [

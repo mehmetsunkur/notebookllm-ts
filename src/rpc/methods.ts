@@ -5,10 +5,10 @@
 export const RPCMethod = {
   // Notebooks
   LIST_NOTEBOOKS: "wXbhsf",
-  CREATE_NOTEBOOK: "QTsXBe",
-  DELETE_NOTEBOOK: "nkFkC",
-  RENAME_NOTEBOOK: "Lnuk5b",
-  GET_NOTEBOOK: "SRNFge",
+  CREATE_NOTEBOOK: "CCqFvf",
+  DELETE_NOTEBOOK: "WWINqb",
+  RENAME_NOTEBOOK: "s0tc2d",
+  GET_NOTEBOOK: "rLM1Ne",
   NOTEBOOK_SUMMARY: "nNPbhd",
 
   // Sources

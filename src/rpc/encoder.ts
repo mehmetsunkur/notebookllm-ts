@@ -21,6 +21,8 @@ export interface RPCRequest {
   bl: string;
   /** Language tag (default "en") */
   hl?: string;
+  /** Source path (default "/") */
+  sourcePath?: string;
 }
 
 export interface EncodedRequest {
@@ -33,10 +35,11 @@ export interface EncodedRequest {
  */
 export function encodeRequest(req: RPCRequest): EncodedRequest {
   const hl = req.hl ?? "en";
+  const sourcePath = req.sourcePath ?? "/";
 
   const params = new URLSearchParams({
     rpcids: req.method,
-    "source-path": "/",
+    "source-path": sourcePath,
     "f.sid": req.sid,
     bl: req.bl,
     hl,
@@ -72,12 +75,13 @@ export function encodeMultiRequest(
   sid: string,
   bl: string,
   hl = "en",
+  sourcePath = "/",
 ): EncodedRequest {
   const rpcids = calls.map((c) => c.method).join(",");
 
   const params = new URLSearchParams({
     rpcids,
-    "source-path": "/",
+    "source-path": sourcePath,
     "f.sid": sid,
     bl,
     hl,

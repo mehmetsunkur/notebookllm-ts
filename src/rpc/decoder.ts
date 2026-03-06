@@ -116,7 +116,7 @@ export function parseChunk(raw: string): DecodedChunk | null {
  * Decode a full batchexecute response and return results keyed by method ID.
  * Throws DecodingError or RPCError on failure.
  */
-export function decodeResponse(responseText: string, expectedMethod: string): unknown {
+export function decodeResponse(responseText: string, expectedMethod: string, allowNull = false): unknown {
   if (!responseText || responseText.trim() === "") {
     throw new DecodingError("Empty response from server", expectedMethod);
   }
@@ -155,6 +155,7 @@ export function decodeResponse(responseText: string, expectedMethod: string): un
     if (results.size === 1) {
       return results.values().next().value;
     }
+    if (allowNull) return null;
     throw new DecodingError(
       `No result found for method ${expectedMethod}. Got: ${[...results.keys()].join(", ")}`,
       expectedMethod,

@@ -3,8 +3,8 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
-import type { GlobalOptions } from "../types.ts";
+import { makeClient, action, printOrJson, requireNotebookId } from "./options.js";
+import type { GlobalOptions } from "../types.js";
 
 export function buildChatCommands(program: Command): void {
   // ask <question>

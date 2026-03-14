@@ -1,4 +1,4 @@
-import { RPCError, AuthError, RateLimitError, ServerError, ClientError } from "../exceptions.ts";
+import { RPCError, AuthError, RateLimitError, ServerError, ClientError } from "../exceptions.js";
 
 export function rpcErrorFromStatus(
   statusCode: number,

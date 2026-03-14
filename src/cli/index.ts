@@ -1,27 +1,28 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // NotebookLM TypeScript CLI entry point
 // Usage: notebooklm [options] <command> [args]
 
 import { Command } from "commander";
 import { readFileSync } from "fs";
-import { join } from "path";
-import { buildSessionCommands } from "./session.ts";
-import { buildNotebookCommands } from "./notebook.ts";
-import { buildSourceCommands } from "./source.ts";
-import { buildChatCommands } from "./chat.ts";
-import { buildGenerateCommands } from "./generate.ts";
-import { buildDownloadCommands } from "./download.ts";
-import { buildArtifactCommands } from "./artifact.ts";
-import { buildNoteCommands } from "./note.ts";
-import { buildResearchCommands } from "./research.ts";
-import { buildLanguageCommands } from "./language.ts";
-import { buildShareCommands } from "./share.ts";
-import { buildSkillCommands } from "./skill.ts";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import { buildSessionCommands } from "./session.js";
+import { buildNotebookCommands } from "./notebook.js";
+import { buildSourceCommands } from "./source.js";
+import { buildChatCommands } from "./chat.js";
+import { buildGenerateCommands } from "./generate.js";
+import { buildDownloadCommands } from "./download.js";
+import { buildArtifactCommands } from "./artifact.js";
+import { buildNoteCommands } from "./note.js";
+import { buildResearchCommands } from "./research.js";
+import { buildLanguageCommands } from "./language.js";
+import { buildShareCommands } from "./share.js";
+import { buildSkillCommands } from "./skill.js";
 
 // Read version from package.json
 let version = "0.1.0";
 try {
-  const pkgPath = join(import.meta.dir, "../../package.json");
+  const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "../../package.json");
   const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
   version = pkg.version ?? version;
 } catch {

@@ -1,7 +1,7 @@
-import { ClientCore } from "./core.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { Notebook, NotebookDescription, SuggestedTopic } from "../types.ts";
-import { NotebookNotFoundError } from "../exceptions.ts";
+import { ClientCore } from "./core.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { Notebook, NotebookDescription, SuggestedTopic } from "../types.js";
+import { NotebookNotFoundError } from "../exceptions.js";
 
 export class NotebooksAPI extends ClientCore {
   async list(): Promise<Notebook[]> {

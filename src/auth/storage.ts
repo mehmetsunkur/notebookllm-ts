@@ -1,9 +1,9 @@
 // Load auth state from storage_state.json (Playwright format).
 // Supports both file-based storage and inline JSON via env var.
 
-import { ConfigurationError, AuthError } from "../exceptions.ts";
-import type { StorageState, CookieEntry } from "../types.ts";
-import { getStoragePath } from "../paths.ts";
+import { ConfigurationError, AuthError } from "../exceptions.js";
+import type { StorageState, CookieEntry } from "../types.js";
+import { getStoragePath } from "../paths.js";
 
 const AUTH_JSON_ENV = "NOTEBOOKLLM_TS_AUTH_JSON";
 
@@ -127,8 +127,8 @@ export function buildCookieHeader(cookies: CookieEntry[]): string {
  * Load StorageState from a file path.
  */
 export async function loadStorageFromFile(filePath: string): Promise<StorageState> {
-  const file = Bun.file(filePath);
-  const exists = await file.exists();
+  const { readFile, access } = await import("fs/promises");
+  const exists = await access(filePath).then(() => true).catch(() => false);
   if (!exists) {
     throw new ConfigurationError(
       `Auth storage file not found: ${filePath}\nRun \`notebooklm login\` to authenticate.`,
@@ -136,7 +136,7 @@ export async function loadStorageFromFile(filePath: string): Promise<StorageStat
   }
 
   try {
-    const text = await file.text();
+    const text = await readFile(filePath, "utf-8");
     return JSON.parse(text) as StorageState;
   } catch (e) {
     throw new ConfigurationError(
@@ -189,5 +189,6 @@ export async function loadAuthFromStorage(storagePath?: string): Promise<Storage
  * Save a StorageState to file.
  */
 export async function saveStorageState(state: StorageState, filePath: string): Promise<void> {
-  await Bun.write(filePath, JSON.stringify(state, null, 2));
+  const { writeFile } = await import("fs/promises");
+  await writeFile(filePath, JSON.stringify(state, null, 2));
 }

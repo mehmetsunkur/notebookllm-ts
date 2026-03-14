@@ -1,7 +1,7 @@
-import { ClientCore } from "./core.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { Language } from "../types.ts";
-import { getConfigPath, ensureHomeDir } from "../paths.ts";
+import { ClientCore } from "./core.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { Language } from "../types.js";
+import { getConfigPath, ensureHomeDir } from "../paths.js";
 
 export class SettingsAPI extends ClientCore {
   async listLanguages(): Promise<Language[]> {
@@ -57,11 +57,12 @@ export class SettingsAPI extends ClientCore {
 
   /** Get language from local config file. */
   async getLocalLanguage(homeDir?: string): Promise<string | null> {
+    const { readFile, access } = await import("fs/promises");
     const configPath = getConfigPath(homeDir);
-    const file = Bun.file(configPath);
-    if (!(await file.exists())) return null;
+    const exists = await access(configPath).then(() => true).catch(() => false);
+    if (!exists) return null;
     try {
-      const config = JSON.parse(await file.text());
+      const config = JSON.parse(await readFile(configPath, "utf-8"));
       return config.language ?? null;
     } catch {
       return null;
@@ -70,19 +71,20 @@ export class SettingsAPI extends ClientCore {
 
   /** Set language in local config file. */
   async setLocalLanguage(languageCode: string, homeDir?: string): Promise<void> {
+    const { readFile, writeFile, access } = await import("fs/promises");
     await ensureHomeDir(homeDir);
     const configPath = getConfigPath(homeDir);
-    const file = Bun.file(configPath);
     let config: Record<string, unknown> = {};
-    if (await file.exists()) {
+    const exists = await access(configPath).then(() => true).catch(() => false);
+    if (exists) {
       try {
-        config = JSON.parse(await file.text());
+        config = JSON.parse(await readFile(configPath, "utf-8"));
       } catch {
         // Start fresh
       }
     }
     config.language = languageCode;
-    await Bun.write(configPath, JSON.stringify(config, null, 2));
+    await writeFile(configPath, JSON.stringify(config, null, 2));
   }
 }
 

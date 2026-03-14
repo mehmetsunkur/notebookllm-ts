@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { extractTokensFromHtml } from "../../src/auth/tokens.ts";
-import { buildCookieHeader } from "../../src/auth/storage.ts";
-import { AuthError } from "../../src/exceptions.ts";
-import type { CookieEntry } from "../../src/types.ts";
+import { extractTokensFromHtml } from "../../src/auth/tokens.js";
+import { buildCookieHeader } from "../../src/auth/storage.js";
+import { AuthError } from "../../src/exceptions.js";
+import type { CookieEntry } from "../../src/types.js";
 
 describe("extractTokensFromHtml", () => {
   function makeHtml(snlm0e: string, fdrfje: string, cfb2h: string): string {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { GenerateAPI } from "../../src/api/artifacts.ts";
-import type { RPCOptions } from "../../src/api/core.ts";
-import { RPCMethod } from "../../src/rpc/methods.ts";
+import { GenerateAPI } from "../../src/api/artifacts.js";
+import type { RPCOptions } from "../../src/api/core.js";
+import { RPCMethod } from "../../src/rpc/methods.js";
 
 class TestArtifactsAPI extends GenerateAPI {
   calls: Array<{ method: string; payload: unknown; options: RPCOptions }> = [];

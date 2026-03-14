@@ -1,9 +1,9 @@
 // Shared CLI option helpers for Commander.js commands.
 
 import type { Command } from "commander";
-import { NotebookLMClient } from "../api/client.ts";
-import { getHomeDir, getStoragePath } from "../paths.ts";
-import type { GlobalOptions } from "../types.ts";
+import { NotebookLMClient } from "../api/client.js";
+import { getHomeDir, getStoragePath } from "../paths.js";
+import type { GlobalOptions } from "../types.js";
 
 /**
  * Get the resolved home dir from the root command's --storage option.

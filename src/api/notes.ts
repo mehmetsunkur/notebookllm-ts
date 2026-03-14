@@ -1,6 +1,6 @@
-import { ClientCore } from "./core.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { Note } from "../types.ts";
+import { ClientCore } from "./core.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { Note } from "../types.js";
 
 export class NotesAPI extends ClientCore {
   async list(notebookId: string): Promise<Note[]> {

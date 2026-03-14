@@ -2,9 +2,9 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { GlobalOptions } from "../types.ts";
+import { makeClient, action, printOrJson, requireNotebookId } from "./options.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { GlobalOptions } from "../types.js";
 
 export function buildSkillCommands(program: Command): void {
   const skillCmd = new Command("skill").description("Manage NotebookLM Skills (Plus feature)");

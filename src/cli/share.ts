@@ -3,8 +3,8 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
-import type { GlobalOptions, Permission } from "../types.ts";
+import { makeClient, action, printOrJson, requireNotebookId } from "./options.js";
+import type { GlobalOptions, Permission } from "../types.js";
 
 export function buildShareCommands(program: Command): void {
   const shareCmd = new Command("share").description("Manage notebook sharing settings");

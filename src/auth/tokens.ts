@@ -1,8 +1,8 @@
 // Extract authentication tokens from the NotebookLM homepage HTML.
 // These tokens are embedded in the page's JavaScript initialization data.
 
-import { AuthError } from "../exceptions.ts";
-import type { AuthTokens } from "../types.ts";
+import { AuthError } from "../exceptions.js";
+import type { AuthTokens } from "../types.js";
 
 const NOTEBOOKLM_URL = "https://notebooklm.google.com/";
 

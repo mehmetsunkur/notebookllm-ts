@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { SourcesAPI } from "../../src/api/sources.ts";
-import type { RPCOptions } from "../../src/api/core.ts";
-import { RPCMethod } from "../../src/rpc/methods.ts";
+import { SourcesAPI } from "../../src/api/sources.js";
+import type { RPCOptions } from "../../src/api/core.js";
+import { RPCMethod } from "../../src/rpc/methods.js";
 
 class TestSourcesAPI extends SourcesAPI {
   calls: Array<{ method: string; payload: unknown; options: RPCOptions }> = [];

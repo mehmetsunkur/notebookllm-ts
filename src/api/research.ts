@@ -1,6 +1,6 @@
-import { ClientCore } from "./core.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { ResearchStatus, ResearchSource } from "../types.ts";
+import { ClientCore } from "./core.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { ResearchStatus, ResearchSource } from "../types.js";
 
 export interface ResearchTask {
   taskId: string;

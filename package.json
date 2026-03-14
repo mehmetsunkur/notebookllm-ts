@@ -1,6 +1,6 @@
 {
   "name": "notebooklm-ts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript CLI and API for Google NotebookLM",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,7 +9,9 @@
     "./cli": "./dist/cli/index.js"
   },
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "bin": {
     "notebooklm": "./dist/cli/index.js"
   },

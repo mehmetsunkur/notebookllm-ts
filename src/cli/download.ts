@@ -4,8 +4,8 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { makeClient, action, requireNotebookId } from "./options.ts";
-import type { GlobalOptions, ArtifactType } from "../types.ts";
+import { makeClient, action, requireNotebookId } from "./options.js";
+import type { GlobalOptions, ArtifactType } from "../types.js";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { NotesAPI } from "../../src/api/notes.ts";
-import type { RPCOptions } from "../../src/api/core.ts";
-import { RPCMethod } from "../../src/rpc/methods.ts";
+import { NotesAPI } from "../../src/api/notes.js";
+import type { RPCOptions } from "../../src/api/core.js";
+import { RPCMethod } from "../../src/rpc/methods.js";
 
 class TestNotesAPI extends NotesAPI {
   calls: Array<{ method: string; payload: unknown; options: RPCOptions }> = [];

@@ -2,12 +2,12 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { makeClient, action, handleError, printOrJson, resolveHomeDir } from "./options.ts";
-import { login, hasValidStorage } from "../auth/login.ts";
-import { getStoragePath, getContextPath, getHomeDir } from "../paths.ts";
-import { loadCookieHeader } from "../auth/storage.ts";
-import { fetchTokens } from "../auth/tokens.ts";
-import type { GlobalOptions } from "../types.ts";
+import { makeClient, action, handleError, printOrJson, resolveHomeDir } from "./options.js";
+import { login, hasValidStorage } from "../auth/login.js";
+import { getStoragePath, getContextPath, getHomeDir } from "../paths.js";
+import { loadCookieHeader } from "../auth/storage.js";
+import { fetchTokens } from "../auth/tokens.js";
+import type { GlobalOptions } from "../types.js";
 
 export function buildSessionCommands(program: Command): void {
   // login

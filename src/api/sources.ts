@@ -1,7 +1,7 @@
-import { ClientCore } from "./core.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { Source, SourceFullText } from "../types.ts";
-import { SourceNotFoundError, SourceAddError, SourceTimeoutError } from "../exceptions.ts";
+import { ClientCore } from "./core.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { Source, SourceFullText } from "../types.js";
+import { SourceNotFoundError, SourceAddError, SourceTimeoutError } from "../exceptions.js";
 
 const UPLOAD_URL = "https://notebooklm.google.com/upload/";
 
@@ -86,12 +86,13 @@ export class SourcesAPI extends ClientCore {
   }
 
   async addFile(notebookId: string, filePath: string, title?: string): Promise<Source> {
-    const file = Bun.file(filePath);
-    if (!(await file.exists())) {
+    const { readFile, access } = await import("fs/promises");
+    const exists = await access(filePath).then(() => true).catch(() => false);
+    if (!exists) {
       throw new SourceAddError(`File not found: ${filePath}`);
     }
 
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    const bytes = new Uint8Array(await readFile(filePath));
     const fileName = title ?? filePath.split("/").pop() ?? "upload";
 
     const registerRaw = await this.rpc(

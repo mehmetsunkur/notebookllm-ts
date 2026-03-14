@@ -4,8 +4,8 @@ import { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId, resolveArtifactId } from "./options.ts";
-import type { GlobalOptions, ArtifactType } from "../types.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveArtifactId } from "./options.js";
+import type { GlobalOptions, ArtifactType } from "../types.js";
 
 export function buildArtifactCommands(program: Command): void {
   const artifactCmd = new Command("artifact").description("Manage generated artifacts");

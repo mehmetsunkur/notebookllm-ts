@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { SharingAPI } from "../../src/api/sharing.ts";
-import type { RPCOptions } from "../../src/api/core.ts";
-import { RPCMethod } from "../../src/rpc/methods.ts";
+import { SharingAPI } from "../../src/api/sharing.js";
+import type { RPCOptions } from "../../src/api/core.js";
+import { RPCMethod } from "../../src/rpc/methods.js";
 
 class TestSharingAPI extends SharingAPI {
   calls: Array<{ method: string; payload: unknown; options: RPCOptions }> = [];

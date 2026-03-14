@@ -1,8 +1,8 @@
-import { ClientCore } from "./core.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { ChatMessage, ChatResponse } from "../types.ts";
-import { NetworkError } from "../exceptions.ts";
-import { rpcErrorFromStatus } from "../rpc/errors.ts";
+import { ClientCore } from "./core.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { ChatMessage, ChatResponse } from "../types.js";
+import { NetworkError } from "../exceptions.js";
+import { rpcErrorFromStatus } from "../rpc/errors.js";
 
 const CHAT_QUERY_URL =
   "https://notebooklm.google.com/_/LabsTailwindUi/data/google.internal.labs.tailwind.orchestration.v1.LabsTailwindOrchestrationService/GenerateFreeFormStreamed";

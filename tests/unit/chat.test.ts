@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { ChatAPI } from "../../src/api/chat.ts";
-import type { RPCOptions } from "../../src/api/core.ts";
-import { RPCMethod } from "../../src/rpc/methods.ts";
+import { ChatAPI } from "../../src/api/chat.js";
+import type { RPCOptions } from "../../src/api/core.js";
+import { RPCMethod } from "../../src/rpc/methods.js";
 
 class TestChatAPI extends ChatAPI {
   calls: Array<{ method: string; payload: unknown; options: RPCOptions }> = [];

@@ -1,14 +1,14 @@
 // ClientCore: HTTP transport + RPC infrastructure for NotebookLM API calls.
 // All API method classes extend or reference ClientCore for HTTP execution.
 
-import { encodeRequest } from "../rpc/encoder.ts";
-import { decodeResponse } from "../rpc/decoder.ts";
-import { loadCookieHeader } from "../auth/storage.ts";
-import { fetchTokens } from "../auth/tokens.ts";
-import type { AuthTokens } from "../types.ts";
-import { NetworkError, AuthError } from "../exceptions.ts";
-import { rpcErrorFromStatus } from "../rpc/errors.ts";
-import { RPCMethod } from "../rpc/methods.ts";
+import { encodeRequest } from "../rpc/encoder.js";
+import { decodeResponse } from "../rpc/decoder.js";
+import { loadCookieHeader } from "../auth/storage.js";
+import { fetchTokens } from "../auth/tokens.js";
+import type { AuthTokens } from "../types.js";
+import { NetworkError, AuthError } from "../exceptions.js";
+import { rpcErrorFromStatus } from "../rpc/errors.js";
+import { RPCMethod } from "../rpc/methods.js";
 
 export interface CoreOptions {
   /** Path to storage_state.json (overrides default) */

@@ -4,8 +4,8 @@ import { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
-import type { GlobalOptions } from "../types.ts";
+import { makeClient, action, printOrJson, requireNotebookId } from "./options.js";
+import type { GlobalOptions } from "../types.js";
 
 export function buildResearchCommands(program: Command): void {
   const researchCmd = new Command("research").description("Manage research sources");

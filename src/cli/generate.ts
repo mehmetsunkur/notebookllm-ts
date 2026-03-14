@@ -4,9 +4,9 @@
 import { Command, Option } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId, resolveArtifactId } from "./options.ts";
-import { RateLimitError } from "../exceptions.ts";
-import type { GlobalOptions } from "../types.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveArtifactId } from "./options.js";
+import { RateLimitError } from "../exceptions.js";
+import type { GlobalOptions } from "../types.js";
 
 function addCommonGenerateOptions(cmd: Command): Command {
   return cmd

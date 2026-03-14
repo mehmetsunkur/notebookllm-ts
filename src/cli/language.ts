@@ -3,8 +3,8 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
-import { makeClient, action, printOrJson, requireNotebookId } from "./options.ts";
-import type { GlobalOptions } from "../types.ts";
+import { makeClient, action, printOrJson, requireNotebookId } from "./options.js";
+import type { GlobalOptions } from "../types.js";
 
 export function buildLanguageCommands(program: Command): void {
   const langCmd = new Command("language").description("Manage notebook language settings");

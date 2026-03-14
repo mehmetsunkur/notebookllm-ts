@@ -10,94 +10,60 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: bun-linux-x64
-            artifact: notebooklm-linux-x64
-          - os: macos-latest
-            target: bun-darwin-arm64
-            artifact: notebooklm-macos-arm64
-          - os: windows-latest
-            target: bun-windows-x64
-            artifact: notebooklm-windows-x64.exe
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: '20'
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci --ignore-scripts
 
       - name: Typecheck
-        run: bun run typecheck
+        run: npm run typecheck
 
-      - name: Build binary
-        run: >
-          bun build --compile
-          --target=${{ matrix.target }}
-          --external chromium-bidi
-          --external electron
-          src/cli/index.ts
-          --outfile ${{ matrix.artifact }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}
-
-  release:
-    name: Create Release
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist/
+      - name: Build
+        run: npm run build
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/*
           body: |
             ## Installation
 
-            Download the binary for your platform below, make it executable, and place it on your PATH.
+            Install directly from GitHub (no registry required):
 
-            ### Linux / macOS
             ```bash
-            chmod +x notebooklm-*
-            sudo mv notebooklm-* /usr/local/bin/notebooklm
+            npm install github:mehmetsunkur/notebookllm-ts#${{ github.ref_name }}
             ```
 
-            ### Windows
-            Rename to `notebooklm.exe` and add its location to your PATH.
+            Or pin to the tag in your `package.json`:
 
-            ### After download — install the Chromium browser (required for `login`)
+            ```json
+            "dependencies": {
+              "notebooklm-ts": "github:mehmetsunkur/notebookllm-ts#${{ github.ref_name }}"
+            }
+            ```
+
+            ### CLI usage (after install)
+
             ```bash
-            # Install Playwright's Chromium (one-time setup)
+            npx notebooklm --help
+            ```
+
+            ### First-time setup — install Chromium (required for `login` only)
+
+            ```bash
             npx playwright install chromium
-            # or, if you have bun:
-            bunx playwright install chromium
             ```
-
-            This is only needed for the `notebooklm login` command.
-            All other commands work without it once you have a saved session.
 
             ### Authenticate
+
             ```bash
-            notebooklm login
+            npx notebooklm login
             ```

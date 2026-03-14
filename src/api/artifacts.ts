@@ -1,11 +1,11 @@
-import { ClientCore } from "./core.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { Artifact, ArtifactTask, ArtifactType } from "../types.ts";
+import { ClientCore } from "./core.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { Artifact, ArtifactTask, ArtifactType } from "../types.js";
 import {
   ArtifactNotFoundError,
   ArtifactNotReadyError,
   ArtifactDownloadError,
-} from "../exceptions.ts";
+} from "../exceptions.js";
 
 export class ArtifactsAPI extends ClientCore {
   async list(notebookId: string, type?: ArtifactType): Promise<Artifact[]> {

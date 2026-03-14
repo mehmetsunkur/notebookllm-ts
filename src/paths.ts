@@ -28,7 +28,6 @@ export function getBrowserProfileDir(homeDir?: string): string {
 
 export async function ensureHomeDir(homeDir?: string): Promise<string> {
   const dir = homeDir ?? getHomeDir();
-  await Bun.file(dir).exists().catch(() => false);
   const { mkdir } = await import("fs/promises");
   await mkdir(dir, { recursive: true });
   return dir;

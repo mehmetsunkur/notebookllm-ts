@@ -1,6 +1,6 @@
-import { ClientCore } from "./core.ts";
-import { RPCMethod } from "../rpc/methods.ts";
-import type { ShareSettings, Collaborator, Permission } from "../types.ts";
+import { ClientCore } from "./core.js";
+import { RPCMethod } from "../rpc/methods.js";
+import type { ShareSettings, Collaborator, Permission } from "../types.js";
 
 export class SharingAPI extends ClientCore {
   async status(notebookId: string): Promise<ShareSettings> {

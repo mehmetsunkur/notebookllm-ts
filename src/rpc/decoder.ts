@@ -12,7 +12,7 @@
 //   ["wrb.fr", "<method_id>", "<result_json>", ...]  — success
 //   ["er", <details>]                                 — error
 
-import { DecodingError, RPCError, AuthError } from "../exceptions.ts";
+import { DecodingError, RPCError, AuthError } from "../exceptions.js";
 
 export interface DecodedChunk {
   type: "result" | "error" | "info";

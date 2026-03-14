@@ -4,8 +4,8 @@ import { Command, Option } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
-import { makeClient, action, printOrJson, requireNotebookId, resolveSourceId } from "./options.ts";
-import type { GlobalOptions } from "../types.ts";
+import { makeClient, action, printOrJson, requireNotebookId, resolveSourceId } from "./options.js";
+import type { GlobalOptions } from "../types.js";
 
 export function buildSourceCommands(program: Command): void {
   const sourceCmd = new Command("source").description("Manage notebook sources");
@@ -251,7 +251,8 @@ export function buildSourceCommands(program: Command): void {
         const result = await client.sources.fulltext(notebookId, resolvedId);
 
         if (opts.output) {
-          await Bun.write(opts.output, result.content);
+          const { writeFile } = await import("fs/promises");
+          await writeFile(opts.output, result.content);
           console.log(chalk.green(`Saved ${result.content.length.toLocaleString()} chars to ${opts.output}`));
           return;
         }

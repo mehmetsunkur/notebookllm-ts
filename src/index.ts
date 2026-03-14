@@ -1,17 +1,17 @@
 // Public API exports for programmatic use of notebooklm-ts
 
-export { NotebookLMClient } from "./api/client.ts";
-export type { CoreOptions } from "./api/core.ts";
+export { NotebookLMClient } from "./api/client.js";
+export type { CoreOptions } from "./api/core.js";
 
 // API sub-namespaces (for advanced use)
-export { NotebooksAPI } from "./api/notebooks.ts";
-export { SourcesAPI } from "./api/sources.ts";
-export { GenerateAPI, ArtifactsAPI } from "./api/artifacts.ts";
-export { ChatAPI } from "./api/chat.ts";
-export { ResearchAPI } from "./api/research.ts";
-export { NotesAPI } from "./api/notes.ts";
-export { SettingsAPI } from "./api/settings.ts";
-export { SharingAPI } from "./api/sharing.ts";
+export { NotebooksAPI } from "./api/notebooks.js";
+export { SourcesAPI } from "./api/sources.js";
+export { GenerateAPI, ArtifactsAPI } from "./api/artifacts.js";
+export { ChatAPI } from "./api/chat.js";
+export { ResearchAPI } from "./api/research.js";
+export { NotesAPI } from "./api/notes.js";
+export { SettingsAPI } from "./api/settings.js";
+export { SharingAPI } from "./api/sharing.js";
 
 // Types
 export type {
@@ -38,7 +38,7 @@ export type {
   Context,
   Config,
   StorageState,
-} from "./types.ts";
+} from "./types.js";
 
 // Exceptions
 export {
@@ -65,17 +65,17 @@ export {
   ArtifactNotReadyError,
   ArtifactParseError,
   ArtifactDownloadError,
-} from "./exceptions.ts";
+} from "./exceptions.js";
 
 // Low-level RPC utilities (for advanced users)
-export { encodeRequest, encodeMultiRequest } from "./rpc/encoder.ts";
-export { decodeResponse, decodeMultiResponse, splitChunks, parseChunk } from "./rpc/decoder.ts";
-export { RPCMethod } from "./rpc/methods.ts";
+export { encodeRequest, encodeMultiRequest } from "./rpc/encoder.js";
+export { decodeResponse, decodeMultiResponse, splitChunks, parseChunk } from "./rpc/decoder.js";
+export { RPCMethod } from "./rpc/methods.js";
 
 // Auth utilities
-export { fetchTokens, extractTokensFromHtml } from "./auth/tokens.ts";
-export { loadCookieHeader, loadAuthFromStorage, buildCookieHeader } from "./auth/storage.ts";
-export { login } from "./auth/login.ts";
+export { fetchTokens, extractTokensFromHtml } from "./auth/tokens.js";
+export { loadCookieHeader, loadAuthFromStorage, buildCookieHeader } from "./auth/storage.js";
+export { login } from "./auth/login.js";
 
 // Path utilities
-export { getHomeDir, getStoragePath, getContextPath, getConfigPath } from "./paths.ts";
+export { getHomeDir, getStoragePath, getContextPath, getConfigPath } from "./paths.js";

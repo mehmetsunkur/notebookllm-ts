@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { NotebooksAPI } from "../../src/api/notebooks.ts";
-import type { RPCOptions } from "../../src/api/core.ts";
-import { RPCMethod } from "../../src/rpc/methods.ts";
+import { NotebooksAPI } from "../../src/api/notebooks.js";
+import type { RPCOptions } from "../../src/api/core.js";
+import { RPCMethod } from "../../src/rpc/methods.js";
 
 class TestNotebooksAPI extends NotebooksAPI {
   calls: Array<{ method: string; payload: unknown; options: RPCOptions }> = [];

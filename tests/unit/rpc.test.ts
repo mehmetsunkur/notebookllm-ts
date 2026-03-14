@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { encodeRequest, encodeMultiRequest } from "../../src/rpc/encoder.ts";
-import { splitChunks, parseChunk, decodeResponse } from "../../src/rpc/decoder.ts";
-import { DecodingError, AuthError, RPCError } from "../../src/exceptions.ts";
+import { encodeRequest, encodeMultiRequest } from "../../src/rpc/encoder.js";
+import { splitChunks, parseChunk, decodeResponse } from "../../src/rpc/decoder.js";
+import { DecodingError, AuthError, RPCError } from "../../src/exceptions.js";
 
 describe("RPC Encoder", () => {
   const baseParams = {

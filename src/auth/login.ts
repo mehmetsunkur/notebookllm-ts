@@ -2,7 +2,7 @@
 // Opens a Chromium browser for the user to sign in with their Google account,
 // then saves the session cookies in Playwright's storage_state.json format.
 
-import { ensureHomeDir, getBrowserProfileDir, getStoragePath } from "../paths.ts";
+import { ensureHomeDir, getBrowserProfileDir, getStoragePath } from "../paths.js";
 import { mkdir } from "fs/promises";
 
 const NOTEBOOKLM_URL = "https://notebooklm.google.com/";
@@ -79,10 +79,11 @@ export async function login(options: LoginOptions = {}): Promise<string> {
  * Check whether a valid storage_state.json exists and is non-empty.
  */
 export async function hasValidStorage(storagePath: string): Promise<boolean> {
-  const file = Bun.file(storagePath);
-  if (!(await file.exists())) return false;
+  const { readFile, access } = await import("fs/promises");
+  const exists = await access(storagePath).then(() => true).catch(() => false);
+  if (!exists) return false;
   try {
-    const state = JSON.parse(await file.text());
+    const state = JSON.parse(await readFile(storagePath, "utf-8"));
     return Array.isArray(state.cookies) && state.cookies.length > 0;
   } catch {
     return false;

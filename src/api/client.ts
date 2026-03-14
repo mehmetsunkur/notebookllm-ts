@@ -1,17 +1,17 @@
 // NotebookLMClient — the main public API class.
 // Composes all sub-API namespaces into a single entry point.
 
-import { ClientCore, type CoreOptions } from "./core.ts";
-import { NotebooksAPI } from "./notebooks.ts";
-import { SourcesAPI } from "./sources.ts";
-import { GenerateAPI } from "./artifacts.ts";
-import { ChatAPI } from "./chat.ts";
-import { ResearchAPI } from "./research.ts";
-import { NotesAPI } from "./notes.ts";
-import { SettingsAPI } from "./settings.ts";
-import { SharingAPI } from "./sharing.ts";
-import { getContextPath } from "../paths.ts";
-import type { Context } from "../types.ts";
+import { ClientCore, type CoreOptions } from "./core.js";
+import { NotebooksAPI } from "./notebooks.js";
+import { SourcesAPI } from "./sources.js";
+import { GenerateAPI } from "./artifacts.js";
+import { ChatAPI } from "./chat.js";
+import { ResearchAPI } from "./research.js";
+import { NotesAPI } from "./notes.js";
+import { SettingsAPI } from "./settings.js";
+import { SharingAPI } from "./sharing.js";
+import { getContextPath } from "../paths.js";
+import type { Context } from "../types.js";
 
 export class NotebookLMClient {
   readonly notebooks: NotebooksAPI;
@@ -41,11 +41,12 @@ export class NotebookLMClient {
 
   /** Load the current context (active notebook + conversation IDs). */
   async loadContext(): Promise<Context> {
+    const { readFile, access } = await import("fs/promises");
     const contextPath = getContextPath(this.options.homeDir);
-    const file = Bun.file(contextPath);
-    if (!(await file.exists())) return {};
+    const exists = await access(contextPath).then(() => true).catch(() => false);
+    if (!exists) return {};
     try {
-      return JSON.parse(await file.text()) as Context;
+      return JSON.parse(await readFile(contextPath, "utf-8")) as Context;
     } catch {
       return {};
     }
@@ -53,8 +54,9 @@ export class NotebookLMClient {
 
   /** Save context to disk. */
   async saveContext(context: Context): Promise<void> {
+    const { writeFile } = await import("fs/promises");
     const contextPath = getContextPath(this.options.homeDir);
-    await Bun.write(contextPath, JSON.stringify(context, null, 2));
+    await writeFile(contextPath, JSON.stringify(context, null, 2));
   }
 
   /** Clear context. */
